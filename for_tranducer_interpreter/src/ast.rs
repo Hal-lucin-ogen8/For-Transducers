@@ -1,11 +1,13 @@
+// Define the possible expressions in the language
 #[derive(Debug)]
 pub enum Expr {
-    Number(i32),
-    Var(String),
+    Number(i32),     // Numeric literal
+    Var(String),     // Variable
 }
 
+// Define the possible statements in the language
 #[derive(Debug)]
 pub enum Stmt {
-    Print(Expr),
-    For(String, i32, i32, Vec<Stmt>),
+    Print(Expr),                    // Print statement
+    For(String, i32, i32, Vec<Stmt>), // For loop
 }
