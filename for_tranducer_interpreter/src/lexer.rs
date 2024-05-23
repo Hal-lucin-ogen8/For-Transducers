@@ -5,6 +5,7 @@ pub enum Token {
     Print,                // 'print' keyword
     Identifier(String),   // Variable names
     Number(i32),          // Numeric literals
+    String(String),       // String literals
     LeftBrace,            // '{' character
     RightBrace,           // '}' character
     LeftParen,            // '(' character
@@ -65,6 +66,25 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     tokens.push(Token::DotDot);
                 } else {
                     panic!("Unexpected character: {}", ch);
+                }
+            }
+            '"' => {
+                // Match string literals
+                chars.next(); // Consume the opening quote
+                let mut string_literal = String::new();
+                while let Some(&ch) = chars.peek() {
+                    if ch == '"' {
+                        break; // Closing quote found
+                    } else {
+                        string_literal.push(ch);
+                        chars.next();
+                    }
+                }
+                if chars.peek() == Some(&'"') {
+                    chars.next(); // Consume the closing quote
+                    tokens.push(Token::String(string_literal));
+                } else {
+                    panic!("Unterminated string literal");
                 }
             }
             ch if ch.is_numeric() => {

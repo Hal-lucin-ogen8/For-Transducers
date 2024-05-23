@@ -68,6 +68,10 @@ impl Parser {
                 self.current += 1; // Consume the identifier
                 Expr::Var(name) // Return the variable expression
             }
+            Some(Token::String(_)) => {
+                let string = self.expect_string(); // Parse the string
+                Expr::Str(string) // Return the string expression
+            }
             _ => panic!("Unexpected token in expression: {:?}", self.peek()), // Handle unexpected tokens
         }
     }
@@ -89,6 +93,17 @@ impl Parser {
             n
         } else {
             panic!("Expected number, found: {:?}", self.peek());
+        }
+    }
+
+    // Expect a string token and return its value
+    fn expect_string(&mut self) -> String {
+        if let Some(Token::String(s)) = self.peek() {
+            let s = s.clone(); // Clone the string value
+            self.current += 1;
+            s
+        } else {
+            panic!("Expected string, found: {:?}", self.peek());
         }
     }
 

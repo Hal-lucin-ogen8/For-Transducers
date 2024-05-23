@@ -1,31 +1,30 @@
-// Declare modules
 mod lexer;
 mod parser;
 mod ast;
 mod interpreter;
 
-// Import necessary functions and structs
-use lexer::tokenize;
-use parser::Parser;
-use interpreter::Interpreter;
+use std::env;
+use std::fs;
 
 fn main() {
-    // The input program to interpret
-    let input = r#"
-    for i in 0..3 {
-        print(i)
+    // Collect command-line arguments
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: {} <script>", args[0]);
+        return;
     }
-    "#;
 
-    // Tokenize the input
-    let tokens = tokenize(input);
-    // Create a new parser with the tokens
-    let mut parser = Parser::new(tokens);
-    // Parse the tokens into statements (AST)
+    // Read the script file
+    let script = fs::read_to_string(&args[1]).expect("Unable to read script file");
+
+    // Tokenize the script
+    let tokens = lexer::tokenize(&script);
+
+    // Parse the tokens into an AST
+    let mut parser = parser::Parser::new(tokens);
     let stmts = parser.parse();
 
-    // Create a new interpreter
-    let mut interpreter = Interpreter::new();
-    // Interpret the parsed statements
+    // Interpret the AST
+    let mut interpreter = interpreter::Interpreter::new();
     interpreter.interpret(stmts);
 }

@@ -1,23 +1,17 @@
-use std::collections::HashMap; // Import HashMap
-use crate::ast::{Stmt, Expr};  // Import AST definitions
+use crate::ast::{Stmt, Expr};
 
-// Define the interpreter struct
-pub struct Interpreter {
-    variables: HashMap<String, i32>, // HashMap to store variable values
-}
+pub struct Interpreter;
 
 impl Interpreter {
     // Create a new interpreter
     pub fn new() -> Self {
-        Interpreter {
-            variables: HashMap::new(),
-        }
+        Interpreter
     }
 
     // Interpret a vector of statements (AST)
     pub fn interpret(&mut self, stmts: Vec<Stmt>) {
-        for stmt in &stmts {
-            self.execute(stmt); // Execute each statement
+        for stmt in stmts {
+            self.execute(&stmt);
         }
     }
 
@@ -25,25 +19,25 @@ impl Interpreter {
     fn execute(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Print(expr) => {
-                let value = self.evaluate(expr); // Evaluate the expression
-                println!("{}", value); // Print the result
+                let value = self.evaluate(expr);
+                println!("{}", value);
             }
-            Stmt::For(var, start, end, body) => {
-                for i in *start..*end {
-                    self.variables.insert(var.clone(), i); // Set the loop variable
+            Stmt::For(_, start, end, body) => {
+                for _ in *start..*end {
                     for stmt in body {
-                        self.execute(stmt); // Execute each statement in the loop body
+                        self.execute(stmt);
                     }
                 }
             }
         }
     }
 
-    // Evaluate an expression and return its value
-    fn evaluate(&self, expr: &Expr) -> i32 {
+    // Evaluate an expression
+    fn evaluate(&mut self, expr: &Expr) -> String {
         match expr {
-            Expr::Number(n) => *n, // Return the numeric value
-            Expr::Var(name) => *self.variables.get(name).expect("Undefined variable"), // Get the variable value
+            Expr::Number(n) => n.to_string(),
+            Expr::Var(name) => panic!("Variables are not supported yet: {}", name),
+            Expr::Str(s) => s.clone(),
         }
     }
 }
