@@ -1,4 +1,3 @@
-// Define the possible tokens in the language
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     For,                  // 'for' keyword
@@ -13,29 +12,27 @@ pub enum Token {
     DotDot,               // '..' range operator
 }
 
-// Function to tokenize the input string
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();                 // Vector to hold the tokens
     let mut chars = input.chars().peekable();    // Peekable iterator over the input characters
 
-    // Loop through the characters
     while let Some(&ch) = chars.peek() {
         match ch {
             ' ' | '\n' | '\t' => {
                 // Skip whitespace characters
                 chars.next();
             }
-            'f' if input[chars.clone().count()..].starts_with("for") => {
+            'f' if chars.clone().take(3).collect::<String>() == "for" => {
                 // Match the 'for' keyword
                 tokens.push(Token::For);
                 chars.nth(2); // Consume 'for'
             }
-            'i' if input[chars.clone().count()..].starts_with("in") => {
+            'i' if chars.clone().take(2).collect::<String>() == "in" => {
                 // Match the 'in' keyword
                 tokens.push(Token::In);
                 chars.nth(1); // Consume 'in'
             }
-            'p' if input[chars.clone().count()..].starts_with("print") => {
+            'p' if chars.clone().take(5).collect::<String>() == "print" => {
                 // Match the 'print' keyword
                 tokens.push(Token::Print);
                 chars.nth(4); // Consume 'print'
@@ -60,10 +57,15 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::RightParen);
                 chars.next();
             }
-            '.' if input[chars.clone().count()..].starts_with("..") => {
+            '.' => {
                 // Match the '..' range operator
-                tokens.push(Token::DotDot);
-                chars.nth(1); // Consume '..'
+                chars.next(); // Consume first '.'
+                if chars.peek() == Some(&'.') {
+                    chars.next(); // Consume second '.'
+                    tokens.push(Token::DotDot);
+                } else {
+                    panic!("Unexpected character: {}", ch);
+                }
             }
             ch if ch.is_numeric() => {
                 // Match numeric literals

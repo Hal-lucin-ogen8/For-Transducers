@@ -1,7 +1,6 @@
 use crate::lexer::Token;
 use crate::ast::{Stmt, Expr};
 
-// Define the parser struct
 pub struct Parser {
     tokens: Vec<Token>, // Vector of tokens
     current: usize,     // Current position in the token vector
@@ -24,18 +23,18 @@ impl Parser {
 
     // Parse a single statement
     fn statement(&mut self) -> Stmt {
-        match self.tokens[self.current] {
-            Token::Print => {
+        match self.peek() {
+            Some(Token::Print) => {
                 self.current += 1; // Consume 'print'
                 self.expect(Token::LeftParen); // Expect '('
                 let expr = self.expression(); // Parse the expression
                 self.expect(Token::RightParen); // Expect ')'
                 Stmt::Print(expr) // Return the print statement
             }
-            Token::For => {
+            Some(Token::For) => {
                 self.current += 1; // Consume 'for'
-                let var = match &self.tokens[self.current] {
-                    Token::Identifier(name) => name.clone(), // Parse the variable name
+                let var = match self.peek() {
+                    Some(Token::Identifier(name)) => name.clone(), // Parse the variable name
                     _ => panic!("Expected identifier after 'for'"),
                 };
                 self.current += 1; // Consume the identifier
@@ -46,56 +45,65 @@ impl Parser {
                 self.expect(Token::LeftBrace); // Expect '{'
                 let mut body = Vec::new(); // Vector to hold the body statements
                 while !self.matches(Token::RightBrace) {
+                    if self.current >= self.tokens.len() {
+                        panic!("Expected '}}', but found end of input");
+                    }
                     body.push(self.statement()); // Parse each statement in the body
                 }
-                self.expect(Token::RightBrace); // Expect '}'
                 Stmt::For(var, start, end, body) // Return the for statement
             }
-            _ => panic!("Unexpected token: {:?}", self.tokens[self.current]), // Handle unexpected tokens
+            _ => panic!("Unexpected token: {:?}", self.peek()), // Handle unexpected tokens
         }
     }
 
     // Parse an expression
     fn expression(&mut self) -> Expr {
-        match &self.tokens[self.current] {
-            Token::Number(n) => {
-                self.current += 1; // Consume the number
-                Expr::Number(*n) // Return the number expression
+        match self.peek() {
+            Some(Token::Number(_)) => {
+                let number = self.expect_number(); // Parse the number
+                Expr::Number(number) // Return the number expression
             }
-            Token::Identifier(name) => {
+            Some(Token::Identifier(name)) => {
+                let name = name.clone(); // Clone the identifier
                 self.current += 1; // Consume the identifier
-                Expr::Var(name.clone()) // Return the variable expression
+                Expr::Var(name) // Return the variable expression
             }
-            _ => panic!("Unexpected token in expression: {:?}", self.tokens[self.current]), // Handle unexpected tokens
+            _ => panic!("Unexpected token in expression: {:?}", self.peek()), // Handle unexpected tokens
         }
     }
 
     // Expect a specific token and advance the current position
     fn expect(&mut self, token: Token) {
-        if self.tokens[self.current] == token {
+        if self.peek() == Some(&token) {
             self.current += 1;
         } else {
-            panic!("Expected token: {:?}, found: {:?}", token, self.tokens[self.current]);
+            panic!("Expected token: {:?}, found: {:?}", token, self.peek());
         }
     }
 
     // Expect a number token and return its value
     fn expect_number(&mut self) -> i32 {
-        if let Token::Number(n) = self.tokens[self.current] {
+        if let Some(Token::Number(n)) = self.peek() {
+            let n = *n; // Copy the number value
             self.current += 1;
             n
         } else {
-            panic!("Expected number, found: {:?}", self.tokens[self.current]);
+            panic!("Expected number, found: {:?}", self.peek());
         }
     }
 
     // Check if the current token matches the given token and advance if it does
     fn matches(&mut self, token: Token) -> bool {
-        if self.tokens[self.current] == token {
+        if self.peek() == Some(&token) {
             self.current += 1;
             true
         } else {
             false
         }
+    }
+
+    // Peek the current token without advancing
+    fn peek(&self) -> Option<&Token> {
+        self.tokens.get(self.current)
     }
 }
