@@ -9,10 +9,11 @@ impl Interpreter {
     }
 
     // Interpret a vector of statements (AST)
-    pub fn interpret(&mut self, stmts: Vec<Stmt>) {
+    pub fn interpret(&mut self, stmts: Vec<Stmt>) -> String {
         for stmt in stmts {
             self.execute(&stmt);
         }
+        "".to_string()
     }
 
     // Execute a single statement
@@ -41,3 +42,16 @@ impl Interpreter {
         }
     }
 }
+
+#[test]
+fn test_for_loops() {
+    let stmt = Stmt::For(
+        "i".to_string(),
+        0, 10,
+        vec![Stmt::Print(Expr::Number(42))],
+    );
+    let mut interpreter = Interpreter::new();
+    let output = interpreter.interpret(vec![stmt]);
+    assert_eq!(output, "42".to_string().repeat(10));
+}
+
