@@ -1,7 +1,7 @@
 pub enum Stmt {
     Print(Expr),
     For(String, i32, i32, Vec<Stmt>),
-    If(Expr, Vec<Stmt>, Vec<Stmt>), // If statement with condition, then branch, and else branch
+    If(Expr, Vec<Stmt>), // If statement with condition, then branch
 }
 
 pub enum Expr {

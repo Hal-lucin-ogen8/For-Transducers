@@ -56,8 +56,8 @@ impl Parser {
     }
 
     fn if_statement(&mut self) -> Stmt {
-        println!("if_statement\n");
-        self.expect(Token::If);
+        println!("if_statement");
+        self.current += 1;
         let condition = self.expression();
         self.expect(Token::LeftBrace);
         let mut then_branch = Vec::new();
@@ -65,18 +65,7 @@ impl Parser {
             then_branch.push(self.statement());
         }
         self.expect(Token::RightBrace);
-        let else_branch = if self.match_token(Token::Else) {
-            self.expect(Token::LeftBrace);
-            let mut else_branch = Vec::new();
-            while !self.check(Token::RightBrace) {
-                else_branch.push(self.statement());
-            }
-            self.expect(Token::RightBrace);
-            else_branch
-        } else {
-            Vec::new()
-        };
-        Stmt::If(condition, then_branch, else_branch)
+        Stmt::If(condition, then_branch)
     }
 
     fn expression(&mut self) -> Expr {
@@ -125,14 +114,6 @@ impl Parser {
         matches!(self.peek(), Some(t) if *t == token)
     }
 
-    fn match_token(&mut self, token: Token) -> bool {
-        if self.check(token.clone()) {
-            self.current += 1;
-            true
-        } else {
-            false
-        }
-    }
 
     fn expect(&mut self, token: Token) {
         if self.check(token.clone()) {

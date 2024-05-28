@@ -27,11 +27,9 @@ impl Interpreter {
                     self.execute_block(body);
                 }
             }
-            Stmt::If(condition, then_branch, else_branch) => {
+            Stmt::If(condition, then_branch) => {
                 if self.evaluate_condition(condition) {
                     self.execute_block(then_branch);
-                } else {
-                    self.execute_block(else_branch);
                 }
             }
         }

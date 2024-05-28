@@ -39,9 +39,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::Print);
                 chars.nth(4);
             }
-            'o' if chars.clone().take(2).collect::<String>() == "if" => {
+            'i' if chars.clone().take(2).collect::<String>() == "if" => {
                 tokens.push(Token::If);
-                println!("ifjkchskcbskk");
                 chars.nth(1);
             }
             'e' if chars.clone().take(4).collect::<String>() == "else" => {
@@ -137,10 +136,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         }
     }
 
-    //print all tokens
-    for token in &tokens {
-        println!("{:?}", token);
-    }
+    // //print all tokens
+    // for token in &tokens {
+    //     println!("{:?}", token);
+    // }
 
     tokens
 }
