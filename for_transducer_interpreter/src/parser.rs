@@ -56,6 +56,7 @@ impl Parser {
     }
 
     fn if_statement(&mut self) -> Stmt {
+        println!("if_statement\n");
         self.expect(Token::If);
         let condition = self.expression();
         self.expect(Token::LeftBrace);
