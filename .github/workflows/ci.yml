@@ -24,7 +24,7 @@ jobs:
           override: true
           profile: minimal
       - name: Build
-        run: cd for_tranducer_interpreter && cargo build --all-targets --verbose
+        run: cd for_transducer_interpreter && cargo build --all-targets --verbose
       - name: Test
-        run: cd for_tranducer_interpreter && cargo test
+        run: cd for_trandsucer_interpreter && cargo test
 
