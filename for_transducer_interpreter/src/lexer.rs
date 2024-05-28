@@ -130,7 +130,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         break;
                     }
                 }
-                tokens.push(Token::Identifier(identifier));
+                match identifier.as_str() {
+                    "for" => tokens.push(Token::For),
+                    _ => tokens.push(Token::Identifier(identifier)),
+                }
             }
             _ => panic!("Unexpected character: {}", ch),
         }

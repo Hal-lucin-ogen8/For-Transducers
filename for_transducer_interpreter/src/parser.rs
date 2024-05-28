@@ -8,7 +8,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, current: 0 }
+        Parser { tokens, current: 0,}
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
@@ -48,7 +48,11 @@ impl Parser {
                     body.push(self.statement());
                 }
                 self.expect(Token::RightBrace);
+                
+                // println!("Variable: {}, Start: {}, End: {}", var, start, end);
+
                 Stmt::For(var, start, end, body)
+                
             }
             Some(Token::If) => self.if_statement(),
             _ => panic!("Expected statement"),
@@ -56,9 +60,11 @@ impl Parser {
     }
 
     fn if_statement(&mut self) -> Stmt {
-        println!("if_statement");
+        
         self.current += 1;
+        
         let condition = self.expression();
+        
         self.expect(Token::LeftBrace);
         let mut then_branch = Vec::new();
         while !self.check(Token::RightBrace) {
@@ -70,6 +76,7 @@ impl Parser {
 
     fn expression(&mut self) -> Expr {
         let mut expr = self.term();
+        
         while let Some(token) = self.peek().cloned() {
             match token {
                 Token::LessEqual | Token::Less | Token::Equal => {

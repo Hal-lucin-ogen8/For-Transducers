@@ -1,10 +1,15 @@
 use crate::ast::{Stmt, Expr};
+use std::collections::HashMap;
 
-pub struct Interpreter;
+pub struct Interpreter {
+    variables: HashMap<String, i32>,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter
+        Self {
+            variables: HashMap::new(),
+        }
     }
 
     pub fn interpret(&mut self, stmts: Vec<Stmt>) {
@@ -22,10 +27,16 @@ impl Interpreter {
                     Value::Str(s) => println!("{}", s),
                 }
             }
-            Stmt::For(_var, start, end, body) => { // Prefix `var` with `_`
-                for _i in *start..*end { // Prefix `i` with `_`
+            Stmt::For(var, start, end, body) => { // Prefix `var` with `_`
+                for i in *start..*end { // Prefix `i`
+                    //add variables to hashmap
+                    self.variables.insert(var.clone(), i);
+                    // println!("{}: {}", var, i);
                     self.execute_block(body);
+                
                 }
+                // Remove the variable from the map after the loop
+                self.variables.remove(var);
             }
             Stmt::If(condition, then_branch) => {
                 if self.evaluate_condition(condition) {
@@ -45,7 +56,12 @@ impl Interpreter {
         match expr {
             Expr::Number(n) => Value::Number(*n),
             Expr::Str(s) => Value::Str(s.clone()),
-            Expr::Var(_) => panic!("Variables not implemented"),
+            Expr::Var(name) => {
+                match self.variables.get(name) {
+                    Some(value) => Value::Number(*value),
+                    None => panic!("Variable {} not defined", name),
+                }
+            }
             Expr::LessEqual(left, right) => {
                 let left_val = self.evaluate_expr(left);
                 let right_val = self.evaluate_expr(right);
