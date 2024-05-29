@@ -29,7 +29,7 @@ The interpreter currently supports the following functionalities:
   - Both forward and reverse for loops can be parsed and processed correctly.
   
 - **Execution of If Statements**:
-  - The interpreter can execute `if` statements, although this functionality currently does not include handling of labels.
+  - The interpreter can execute `if` statements including handling of labels
 
 ## To be Done
 - Taking input word from user
