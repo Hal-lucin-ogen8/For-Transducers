@@ -1,7 +1,7 @@
 pub enum Stmt {
     Print(Expr),
     For(String, i32, i32, Vec<Stmt>),
-    If(Expr, Vec<Stmt>), // If statement with condition, then branch
+    If(Expr, Vec<Stmt>, Vec<Stmt>), // If statement with condition, then branch, else branch
 }
 
 pub enum Expr {
@@ -11,4 +11,5 @@ pub enum Expr {
     LessEqual(Box<Expr>, Box<Expr>), // Less than or equal to comparison
     Less(Box<Expr>, Box<Expr>),      // Less than comparison
     Equal(Box<Expr>, Box<Expr>),     // Equal to comparison
+    Label(String),
 }

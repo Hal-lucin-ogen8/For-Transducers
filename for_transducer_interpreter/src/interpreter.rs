@@ -5,6 +5,8 @@ pub struct Interpreter {
     variables: HashMap<String, i32>,
 }
 
+static WORD: &str = "hellloooo";
+
 impl Interpreter {
     pub fn new() -> Self {
         Self {
@@ -23,10 +25,32 @@ impl Interpreter {
             Stmt::Print(expr) => {
                 let value = self.evaluate_expr(expr);
                 match value {
-                    Value::Number(n) => println!("{}", n),
-                    Value::Str(s) => println!("{}", s),
+                    Value::Number(n) => {
+                        if let Some(character) = WORD.chars().nth(n as usize) {
+                            println!("{}", character);
+                        } else {
+                            println!("Index out of bounds");
+                        }
+                    }
+                    Value::Str(s) => {
+                        let parts: Vec<&str> = s.split('.').collect();
+                        if parts.len() == 2 && parts[1] == "label" {
+                            if let Some(i) = self.variables.get(parts[0]) {
+                                if let Some(character) = WORD.chars().nth(*i as usize) {
+                                    println!("{}", character);
+                                } else {
+                                    println!("Index out of bounds");
+                                }
+                            } else {
+                                println!("Variable {} not defined", parts[0]);
+                            }
+                        } else {
+                            println!("{}", s);
+                        }
+                    }
                 }
             }
+            
             Stmt::For(var, start, end, body) => { // Prefix `var` with `_`
                 for i in *start..*end { // Prefix `i`
                     //add variables to hashmap
@@ -38,9 +62,12 @@ impl Interpreter {
                 // Remove the variable from the map after the loop
                 self.variables.remove(var);
             }
-            Stmt::If(condition, then_branch) => {
+            Stmt::If(condition, then_branch, else_branch) => {
                 if self.evaluate_condition(condition) {
                     self.execute_block(then_branch);
+                } 
+                else {
+                    self.execute_block(else_branch);
                 }
             }
         }
@@ -59,6 +86,18 @@ impl Interpreter {
             Expr::Var(name) => {
                 match self.variables.get(name) {
                     Some(value) => Value::Number(*value),
+                    None => panic!("Variable {} not defined", name),
+                }
+            }
+            Expr::Label(name) => {
+                match self.variables.get(name) {
+                    Some(value) => {
+                        if let Some(character) = WORD.chars().nth(*value as usize) {
+                            Value::Str(character.to_string())
+                        } else {
+                            panic!("Index out of bounds");
+                        }
+                    }
                     None => panic!("Variable {} not defined", name),
                 }
             }

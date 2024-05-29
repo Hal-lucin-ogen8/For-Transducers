@@ -60,18 +60,28 @@ impl Parser {
     }
 
     fn if_statement(&mut self) -> Stmt {
-        
         self.current += 1;
-        
+    
         let condition = self.expression();
-        
+    
         self.expect(Token::LeftBrace);
         let mut then_branch = Vec::new();
         while !self.check(Token::RightBrace) {
             then_branch.push(self.statement());
         }
         self.expect(Token::RightBrace);
-        Stmt::If(condition, then_branch)
+    
+        let mut else_branch = Vec::new();
+        if let Some(Token::Else) = self.peek() {
+            self.current += 1;
+            self.expect(Token::LeftBrace);
+            while !self.check(Token::RightBrace) {
+                else_branch.push(self.statement());
+            }
+            self.expect(Token::RightBrace);
+        }
+    
+        Stmt::If(condition, then_branch, else_branch)
     }
 
     fn expression(&mut self) -> Expr {
@@ -108,6 +118,10 @@ impl Parser {
             Some(Token::Identifier(name)) => {
                 self.current += 1;
                 Expr::Var(name)
+            }
+            Some(Token::Label(name)) => {
+                self.current += 1;
+                Expr::Label(name)
             }
             _ => panic!("Expected expression"),
         }

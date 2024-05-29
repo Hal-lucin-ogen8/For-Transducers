@@ -16,6 +16,7 @@ pub enum Token {
     LessEqual,
     Less,
     Equal,
+    Label(String),
 }
 
 pub fn tokenize(input: &str) -> Vec<Token> {
@@ -69,7 +70,20 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     chars.next();
                     tokens.push(Token::DotDot);
                 } else {
-                    panic!("Unexpected character: {}", ch);
+                    let mut label = String::new();
+                    while let Some(&ch) = chars.peek() {
+                        if ch.is_alphanumeric() || ch == '_' {
+                            label.push(ch);
+                            chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    if label == "label" {
+                        tokens.push(Token::Label(label));
+                    } else {
+                        panic!("Unexpected character: {}", ch);
+                    }
                 }
             }
             '<' => {
@@ -123,26 +137,31 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ch if ch.is_alphabetic() => {
                 let mut identifier = String::new();
                 while let Some(&ch) = chars.peek() {
-                    if ch.is_alphanumeric() {
+                    if ch.is_alphanumeric() || ch == '.' {
                         identifier.push(ch);
                         chars.next();
                     } else {
                         break;
                     }
                 }
-                match identifier.as_str() {
-                    "for" => tokens.push(Token::For),
-                    _ => tokens.push(Token::Identifier(identifier)),
+                let parts: Vec<&str> = identifier.split('.').collect();
+                if parts.len() == 2 && parts[1] == "label" {
+                    tokens.push(Token::Label(parts[0].to_string()));
+                } else {
+                    match identifier.as_str() {
+                        "for" => tokens.push(Token::For),
+                        _ => tokens.push(Token::Identifier(identifier)),
+                    }
                 }
             }
             _ => panic!("Unexpected character: {}", ch),
         }
     }
 
-    // //print all tokens
-    // for token in &tokens {
-    //     println!("{:?}", token);
-    // }
+    //print all tokens
+    for token in &tokens {
+        println!("{:?}", token);
+    }
 
     tokens
 }

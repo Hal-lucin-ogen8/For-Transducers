@@ -1,7 +1,11 @@
 for i in 1..3 {
     for j in 1..5 {
-        if i < j {
-            print("i < j")
+        if i == 1 {
+            print(i.label)
+        }
+
+        else {
+            print(j.label)
         }
     }
     
