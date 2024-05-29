@@ -159,9 +159,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     }
 
     //print all tokens
-    for token in &tokens {
-        println!("{:?}", token);
-    }
+    // for token in &tokens {
+    //     println!("{:?}", token);
+    // }
 
     tokens
 }

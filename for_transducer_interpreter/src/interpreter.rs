@@ -52,21 +52,38 @@ impl Interpreter {
             }
             
             Stmt::For(var, start, end, body) => { // Prefix `var` with `_`
-                for i in *start..*end { // Prefix `i`
-                    //add variables to hashmap
-                    self.variables.insert(var.clone(), i);
-                    // println!("{}: {}", var, i);
-                    self.execute_block(body);
-                
+                println!("{}: {} to {}", var, start, end);
+                if start <= end {
+                    for i in *start..*end { 
+                        //add variables to hashmap
+                        self.variables.insert(var.clone(), i);
+                        // println!("{}: {}", var, i);
+                        self.execute_block(body);
+                    
+                    }
+                    // Remove the variable from the map after the loop
+                    self.variables.remove(var);
                 }
-                // Remove the variable from the map after the loop
-                self.variables.remove(var);
+
+                else {
+                    for i in *end..*start { 
+                        //add variables to hashmap
+                        self.variables.insert(var.clone(), start - i - 1);
+                        // println!("{}: {}", var, i);
+                        self.execute_block(body);
+                    
+                    }
+                    // Remove the variable from the map after the loop
+                    self.variables.remove(var);
+                }
+                
             }
+            
             Stmt::If(condition, then_branch, else_branch) => {
                 if self.evaluate_condition(condition) {
-                    self.execute_block(then_branch);
+                    self.execute_block(then_branch);        // Prefix `then_branch`
                 } 
-                else {
+                else {                                    // Prefix `else_branch`
                     self.execute_block(else_branch);
                 }
             }
