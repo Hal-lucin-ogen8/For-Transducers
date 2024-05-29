@@ -52,7 +52,7 @@ impl Interpreter {
             }
             
             Stmt::For(var, start, end, body) => { // Prefix `var` with `_`
-                println!("{}: {} to {}", var, start, end);
+                // println!("{}: {} to {}", var, start, end);
                 if start <= end {
                     for i in *start..*end { 
                         //add variables to hashmap
