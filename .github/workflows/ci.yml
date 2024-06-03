@@ -15,14 +15,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           profile: minimal
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Build
         run: cd for_transducer_interpreter && cargo build --all-targets --verbose
       - name: Test
