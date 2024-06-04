@@ -1,5 +1,9 @@
 print("Hello, World!")
 for i in 0..3 {
-    print("Iteration\n")
+    print("lmao\n")
+    for j in 0..2 {
+        print("Iteration\n")
+        print(i.label)
+    }
+    
 }
-print(42)

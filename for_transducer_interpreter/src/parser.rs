@@ -8,7 +8,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, current: 0 }
+        Parser { tokens, current: 0,}
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
@@ -48,7 +48,11 @@ impl Parser {
                     body.push(self.statement());
                 }
                 self.expect(Token::RightBrace);
+                
+                // println!("Variable: {}, Start: {}, End: {}", var, start, end);
+
                 Stmt::For(var, start, end, body)
+                
             }
             Some(Token::If) => self.if_statement(),
             _ => panic!("Expected statement"),
@@ -56,30 +60,33 @@ impl Parser {
     }
 
     fn if_statement(&mut self) -> Stmt {
-        self.expect(Token::If);
+        self.current += 1;
+    
         let condition = self.expression();
+    
         self.expect(Token::LeftBrace);
         let mut then_branch = Vec::new();
         while !self.check(Token::RightBrace) {
             then_branch.push(self.statement());
         }
         self.expect(Token::RightBrace);
-        let else_branch = if self.match_token(Token::Else) {
+    
+        let mut else_branch = Vec::new();
+        if let Some(Token::Else) = self.peek() {
+            self.current += 1;
             self.expect(Token::LeftBrace);
-            let mut else_branch = Vec::new();
             while !self.check(Token::RightBrace) {
                 else_branch.push(self.statement());
             }
             self.expect(Token::RightBrace);
-            else_branch
-        } else {
-            Vec::new()
-        };
+        }
+    
         Stmt::If(condition, then_branch, else_branch)
     }
 
     fn expression(&mut self) -> Expr {
         let mut expr = self.term();
+        
         while let Some(token) = self.peek().cloned() {
             match token {
                 Token::LessEqual | Token::Less | Token::Equal => {
@@ -112,6 +119,10 @@ impl Parser {
                 self.current += 1;
                 Expr::Var(name)
             }
+            Some(Token::Label(name)) => {
+                self.current += 1;
+                Expr::Label(name)
+            }
             _ => panic!("Expected expression"),
         }
     }
@@ -124,14 +135,6 @@ impl Parser {
         matches!(self.peek(), Some(t) if *t == token)
     }
 
-    fn match_token(&mut self, token: Token) -> bool {
-        if self.check(token.clone()) {
-            self.current += 1;
-            true
-        } else {
-            false
-        }
-    }
 
     fn expect(&mut self, token: Token) {
         if self.check(token.clone()) {
