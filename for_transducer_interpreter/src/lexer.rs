@@ -108,7 +108,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }
                 }
             }
-
             '!' => {
                 chars.next();
                 match chars.peek() {
@@ -121,7 +120,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }
                 }
             }
-            
             '"' => {
                 chars.next();
                 let mut string_literal = String::new();
@@ -150,7 +148,30 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         break;
                     }
                 }
-                tokens.push(Token::Number(num));
+                if chars.peek() == Some(&'.') && chars.clone().nth(1) == Some('.') {
+                    tokens.push(Token::Number(num));
+                    chars.next();
+                    chars.next();
+                    tokens.push(Token::DotDot);
+                    if let Some(&ch) = chars.peek() {
+                        if ch.is_alphabetic() {
+                            let mut identifier = String::new();
+                            while let Some(&ch) = chars.peek() {
+                                if ch.is_alphanumeric() || ch == '_' {
+                                    identifier.push(ch);
+                                    chars.next();
+                                } else {
+                                    break;
+                                }
+                            }
+                            tokens.push(Token::Identifier(identifier));
+                        } else {
+                            panic!("Unexpected character after '..'");
+                        }
+                    }
+                } else {
+                    tokens.push(Token::Number(num));
+                }
             }
             ch if ch.is_alphabetic() => {
                 let mut identifier = String::new();
@@ -162,13 +183,28 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         break;
                     }
                 }
-                let parts: Vec<&str> = identifier.split('.').collect();
-                if parts.len() == 2 && parts[1] == "label" {
-                    tokens.push(Token::Label(parts[0].to_string()));
+                if identifier.contains("..") {
+                    let parts: Vec<&str> = identifier.split("..").collect();
+                    if parts.len() == 2 {
+                        tokens.push(Token::Identifier(parts[0].to_string()));
+                        tokens.push(Token::DotDot);
+                        if let Ok(num) = parts[1].parse::<i32>() {
+                            tokens.push(Token::Number(num));
+                        } else {
+                            panic!("Invalid number after '..'");
+                        }
+                    } else {
+                        panic!("Invalid identifier with '..'");
+                    }
                 } else {
-                    match identifier.as_str() {
-                        "for" => tokens.push(Token::For),
-                        _ => tokens.push(Token::Identifier(identifier)),
+                    let parts: Vec<&str> = identifier.split('.').collect();
+                    if parts.len() == 2 && parts[1] == "label" {
+                        tokens.push(Token::Label(parts[0].to_string()));
+                    } else {
+                        match identifier.as_str() {
+                            "for" => tokens.push(Token::For),
+                            _ => tokens.push(Token::Identifier(identifier)),
+                        }
                     }
                 }
             }
@@ -176,7 +212,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         }
     }
 
-    //print all tokens
+    // print all tokens
     // for token in &tokens {
     //     println!("{:?}", token);
     // }

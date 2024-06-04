@@ -5,7 +5,8 @@ pub struct Interpreter {
     variables: HashMap<String, i32>,
 }
 
-static WORD: &str = "hellloooo";
+static WORD: &str = "hooo";
+static N : i32 = 4;
 
 impl Interpreter {
     pub fn new() -> Self {
@@ -45,24 +46,24 @@ impl Interpreter {
                 }
             }
             
-            Stmt::For(var, start, end, body) => { // Prefix `var` with `_`
-                // println!("{}: {} to {}", var, start, end);
-                if start <= end {
-                    for i in *start..*end { 
+            Stmt::For(var, direction, body) => { // Prefix `var` with `_`
+                // println!("{}: {}", var, direction);
+                if *direction == false {
+                    for i in 0..N { 
                         //add variables to hashmap
                         self.variables.insert(var.clone(), i);
                         // println!("{}: {}", var, i);
                         self.execute_block(body);
-                    
                     }
                     // Remove the variable from the map after the loop
                     self.variables.remove(var);
                 }
 
                 else {
-                    for i in *end..*start { 
+                    
+                    for i in 0..N { 
                         //add variables to hashmap
-                        self.variables.insert(var.clone(), start - i - 1);
+                        self.variables.insert(var.clone(), N - i - 1);
                         // println!("{}: {}", var, i);
                         self.execute_block(body);
                     

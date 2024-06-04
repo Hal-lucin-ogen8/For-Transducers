@@ -8,7 +8,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, current: 0,}
+        Parser { tokens, current: 0 }
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
@@ -20,7 +20,7 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Stmt {
-        match self.peek() {
+        match self.peek().cloned() {
             Some(Token::Print) => {
                 self.current += 1;
                 self.expect(Token::LeftParen);
@@ -39,20 +39,25 @@ impl Parser {
                     }
                 };
                 self.expect(Token::In);
-                let start = self.expect_number();
+                let start = self.expect_start_token();
                 self.expect(Token::DotDot);
-                let end = self.expect_number();
+                let end = self.expect_end_token();
                 self.expect(Token::LeftBrace);
                 let mut body = Vec::new();
                 while !self.check(Token::RightBrace) {
                     body.push(self.statement());
                 }
                 self.expect(Token::RightBrace);
-                
-                // println!("Variable: {}, Start: {}, End: {}", var, start, end);
 
-                Stmt::For(var, start, end, body)
-                
+                // Validate the start and end conditions
+                let direction = match (start, end) {
+                    (Expr::Number(0), Expr::Var(_)) => false, // Ascending: for i in 0..n
+                    (Expr::Var(_), Expr::Number(0)) => true,  // Descending: for i in n..0
+                    _ => panic!("Invalid for loop syntax. Only 'for i in 0..n' or 'for i in n..0' are allowed."),
+                    
+                };
+                // println!("{}: {}", var, direction);
+                Stmt::For(var, direction, body)
             }
             Some(Token::If) => self.if_statement(),
             _ => panic!("Expected statement"),
@@ -61,16 +66,16 @@ impl Parser {
 
     fn if_statement(&mut self) -> Stmt {
         self.current += 1;
-    
+
         let condition = self.expression();
-    
+
         self.expect(Token::LeftBrace);
         let mut then_branch = Vec::new();
         while !self.check(Token::RightBrace) {
             then_branch.push(self.statement());
         }
         self.expect(Token::RightBrace);
-    
+
         let mut else_branch = Vec::new();
         if let Some(Token::Else) = self.peek() {
             self.current += 1;
@@ -80,13 +85,13 @@ impl Parser {
             }
             self.expect(Token::RightBrace);
         }
-    
+
         Stmt::If(condition, then_branch, else_branch)
     }
 
     fn expression(&mut self) -> Expr {
         let mut expr = self.term();
-        
+
         while let Some(token) = self.peek().cloned() {
             match token {
                 Token::LessEqual | Token::Less | Token::Equal | Token::NotEqual => {
@@ -136,7 +141,6 @@ impl Parser {
         matches!(self.peek(), Some(t) if *t == token)
     }
 
-
     fn expect(&mut self, token: Token) {
         if self.check(token.clone()) {
             self.current += 1;
@@ -145,12 +149,31 @@ impl Parser {
         }
     }
 
-    fn expect_number(&mut self) -> i32 {
-        if let Some(Token::Number(n)) = self.peek().cloned() {
-            self.current += 1;
-            n
-        } else {
-            panic!("Expected number");
+    fn expect_start_token(&mut self) -> Expr {
+        match self.peek().cloned() {
+            Some(Token::Number(0)) => {
+                self.current += 1;
+                Expr::Number(0)
+            }
+            Some(Token::Identifier(name)) if name == "n" => {
+                self.current += 1;
+                Expr::Var(name.clone())
+            }
+            _ => panic!("Expected start token to be '0' or 'n'"),
+        }
+    }
+
+    fn expect_end_token(&mut self) -> Expr {
+        match self.peek().cloned() {
+            Some(Token::Number(0)) => {
+                self.current += 1;
+                Expr::Number(0)
+            }
+            Some(Token::Identifier(name)) if name == "n" => {
+                self.current += 1;
+                Expr::Var(name.clone())
+            }
+            _ => panic!("Expected end token to be '0' or 'n'"),
         }
     }
 }

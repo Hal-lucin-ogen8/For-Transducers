@@ -1,7 +1,12 @@
-for i in 0..9 {
-    for j in 0..2 {
-    if i.label != j.label {
+for i in 0..n {
+    for j in n..0 {
+    if j.label == "h" {
         print("Found an h!")
     }
-}
+
+    else {
+        print("No h found")
+    }
+    
+    }
 }
