@@ -1,28 +1,34 @@
 use crate::ast::{Stmt, Expr};
 use std::collections::HashMap;
 
+// Constants
+static WORD: &str = "hooo";
+static N: i32 = 4;
+
+// Interpreter structure
 pub struct Interpreter {
     variables: HashMap<String, i32>,
 }
 
-static WORD: &str = "hooo";
-static N : i32 = 4;
-
 impl Interpreter {
+    // Constructor for Interpreter
     pub fn new() -> Self {
         Self {
             variables: HashMap::new(),
         }
     }
 
+    // Main function to interpret and execute a list of statements
     pub fn interpret(&mut self, stmts: Vec<Stmt>) {
         for stmt in stmts {
             self.execute(&stmt);
         }
     }
 
+    // Function to execute a single statement
     fn execute(&mut self, stmt: &Stmt) {
         match stmt {
+            // Handle Print statements
             Stmt::Print(expr) => {
                 let value = self.evaluate_expr(expr);
                 match value {
@@ -45,113 +51,104 @@ impl Interpreter {
                     }
                 }
             }
-            
-            Stmt::For(var, direction, body) => { // Prefix `var` with `_`
-                // println!("{}: {}", var, direction);
+            // Handle For loops
+            Stmt::For(var, direction, body) => {
+                // If direction is false, iterate from 0 to N
                 if *direction == false {
-                    for i in 0..N { 
-                        //add variables to hashmap
+                    for i in 0..N {
                         self.variables.insert(var.clone(), i);
-                        // println!("{}: {}", var, i);
                         self.execute_block(body);
                     }
-                    // Remove the variable from the map after the loop
                     self.variables.remove(var);
-                }
-
-                else {
-                    
-                    for i in 0..N { 
-                        //add variables to hashmap
+                } else {
+                    // If direction is true, iterate from N-1 to 0
+                    for i in 0..N {
                         self.variables.insert(var.clone(), N - i - 1);
-                        // println!("{}: {}", var, i);
                         self.execute_block(body);
-                    
                     }
-                    // Remove the variable from the map after the loop
                     self.variables.remove(var);
                 }
-                
             }
-            
+            // Handle If statements
             Stmt::If(condition, then_branch, else_branch) => {
                 if self.evaluate_condition(condition) {
-                    self.execute_block(then_branch);        // Prefix `then_branch`
-                } 
-                else {                                    // Prefix `else_branch`
+                    self.execute_block(then_branch);
+                } else {
                     self.execute_block(else_branch);
                 }
             }
         }
     }
 
+    // Execute a block of statements
     fn execute_block(&mut self, stmts: &[Stmt]) {
         for stmt in stmts {
             self.execute(stmt);
         }
     }
 
-    
-fn evaluate_expr(&mut self, expr: &Expr) -> Value {
-    match expr {
-        Expr::Number(n) => Value::Number(*n),
-        Expr::Str(s) => Value::Str(s.clone()),
-        Expr::Var(name) => {
-            match self.variables.get(name) {
-                Some(value) => Value::Number(*value),
-                None => panic!("Variable {} not defined", name),
+    // Evaluate an expression and return a Value
+    fn evaluate_expr(&mut self, expr: &Expr) -> Value {
+        match expr {
+            Expr::Number(n) => Value::Number(*n),
+            Expr::Str(s) => Value::Str(s.clone()),
+            Expr::Var(name) => {
+                match self.variables.get(name) {
+                    Some(value) => Value::Number(*value),
+                    None => panic!("Variable {} not defined", name),
+                }
             }
-        }
-        Expr::Label(name) => {
-            match self.variables.get(name) {
-                Some(value) => {
-                    if let Some(character) = WORD.chars().nth(*value as usize) {
-                        Value::Str(character.to_string())
-                    } else {
-                        panic!("Index out of bounds");
+            Expr::Label(name) => {
+                match self.variables.get(name) {
+                    Some(value) => {
+                        if let Some(character) = WORD.chars().nth(*value as usize) {
+                            Value::Str(character.to_string())
+                        } else {
+                            panic!("Index out of bounds");
+                        }
                     }
+                    None => panic!("Variable {} not defined", name),
                 }
-                None => panic!("Variable {} not defined", name),
             }
-        }
-        Expr::LessEqual(left, right) | Expr::Less(left, right) | Expr::Equal(left, right) | Expr::NotEqual(left, right) => {
-            let left_val = self.evaluate_expr(left);
-            let right_val = self.evaluate_expr(right);
-    
-            match (left_val, right_val) {
-                // Comparison between two variables that were in the hashmap
-                (Value::Number(lv), Value::Number(rv)) => {
-                    if self.is_variable(left) && self.is_variable(right) {
-                        match expr {
-                            Expr::LessEqual(_, _) => Value::Number((lv <= rv) as i32),
-                            Expr::Less(_, _) => Value::Number((lv < rv) as i32),
-                            Expr::Equal(_, _) => Value::Number((lv == rv) as i32),
-                            Expr::NotEqual(_, _) => Value::Number((lv != rv) as i32), // Add this line
-                            _ => panic!("Unexpected comparison"),
+            // Evaluate comparison expressions
+            Expr::LessEqual(left, right) | Expr::Less(left, right) | Expr::Equal(left, right) | Expr::NotEqual(left, right) => {
+                let left_val = self.evaluate_expr(left);
+                let right_val = self.evaluate_expr(right);
+
+                match (left_val, right_val) {
+                    // Comparison between two variables that were in the hashmap
+                    (Value::Number(lv), Value::Number(rv)) => {
+                        if self.is_variable(left) && self.is_variable(right) {
+                            match expr {
+                                Expr::LessEqual(_, _) => Value::Number((lv <= rv) as i32),
+                                Expr::Less(_, _) => Value::Number((lv < rv) as i32),
+                                Expr::Equal(_, _) => Value::Number((lv == rv) as i32),
+                                Expr::NotEqual(_, _) => Value::Number((lv != rv) as i32),
+                                _ => panic!("Unexpected comparison"),
+                            }
+                        } else {
+                            panic!("Invalid comparison: comparison between two labels are disallowed");
                         }
-                    } else {
-                        panic!("Invalid comparison: comparison between two labels are disallowed");
                     }
-                }
-                // Comparison of the type i.label == "some_char"
-                (Value::Str(ls), Value::Str(rs)) => {
-                    if self.is_label(left) && self.is_literal(right) || self.is_literal(left) && self.is_label(right) {
-                        match expr {
-                            Expr::Equal(_, _) => Value::Number((ls == rs) as i32),
-                            Expr::NotEqual(_, _) => Value::Number((ls != rs) as i32), // Add this line
-                            _ => panic!("Invalid comparison: only equality comparison with labels is allowed"),
+                    // Comparison of the type i.label == "some_char"
+                    (Value::Str(ls), Value::Str(rs)) => {
+                        if self.is_label(left) && self.is_literal(right) || self.is_literal(left) && self.is_label(right) {
+                            match expr {
+                                Expr::Equal(_, _) => Value::Number((ls == rs) as i32),
+                                Expr::NotEqual(_, _) => Value::Number((ls != rs) as i32),
+                                _ => panic!("Invalid comparison: only equality comparison with labels is allowed"),
+                            }
+                        } else {
+                            panic!("Invalid comparison: label can only be compared to a string literal");
                         }
-                    } else {
-                        panic!("Invalid comparison: label can only be compared to a string literal");
                     }
+                    _ => panic!("Invalid comparison types"),
                 }
-                _ => panic!("Invalid comparison types"),
             }
         }
     }
-}
 
-
+    // Check if an expression is a variable
     fn is_variable(&self, expr: &Expr) -> bool {
         match expr {
             Expr::Var(name) => self.variables.contains_key(name),
@@ -159,25 +156,26 @@ fn evaluate_expr(&mut self, expr: &Expr) -> Value {
         }
     }
 
+    // Check if an expression is a label
     fn is_label(&self, expr: &Expr) -> bool {
         matches!(expr, Expr::Label(_))
     }
 
+    // Check if an expression is a string literal
     fn is_literal(&self, expr: &Expr) -> bool {
         matches!(expr, Expr::Str(_))
     }
-}
 
-    impl Interpreter {
-        fn evaluate_condition(&mut self, expr: &Expr) -> bool {
-            match self.evaluate_expr(expr) {
-                Value::Number(n) => n != 0,
-                Value::Str(_) => panic!("String in condition"),
-            }
+    // Evaluate a condition expression and return a boolean
+    fn evaluate_condition(&mut self, expr: &Expr) -> bool {
+        match self.evaluate_expr(expr) {
+            Value::Number(n) => n != 0,
+            Value::Str(_) => panic!("String in condition"),
         }
     }
+}
 
-
+// Enum to represent the value of an expression
 #[derive(Debug, PartialEq, PartialOrd)]
 enum Value {
     Number(i32),

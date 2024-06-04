@@ -7,10 +7,12 @@ pub struct Parser {
 }
 
 impl Parser {
+    // Create a new parser with a list of tokens
     pub fn new(tokens: Vec<Token>) -> Self {
         Parser { tokens, current: 0 }
     }
 
+    // Parse the tokens into a vector of statements
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut stmts = Vec::new();
         while self.current < self.tokens.len() {
@@ -19,8 +21,10 @@ impl Parser {
         stmts
     }
 
+    // Parse a single statement
     fn statement(&mut self) -> Stmt {
         match self.peek().cloned() {
+            // Parse a print statement
             Some(Token::Print) => {
                 self.current += 1;
                 self.expect(Token::LeftParen);
@@ -28,6 +32,7 @@ impl Parser {
                 self.expect(Token::RightParen);
                 Stmt::Print(expr)
             }
+            // Parse a for loop
             Some(Token::For) => {
                 self.current += 1;
                 let var = {
@@ -54,16 +59,17 @@ impl Parser {
                     (Expr::Number(0), Expr::Var(_)) => false, // Ascending: for i in 0..n
                     (Expr::Var(_), Expr::Number(0)) => true,  // Descending: for i in n..0
                     _ => panic!("Invalid for loop syntax. Only 'for i in 0..n' or 'for i in n..0' are allowed."),
-                    
                 };
                 // println!("{}: {}", var, direction);
                 Stmt::For(var, direction, body)
             }
+            // Parse an if statement
             Some(Token::If) => self.if_statement(),
             _ => panic!("Expected statement"),
         }
     }
 
+    // Parse an if statement
     fn if_statement(&mut self) -> Stmt {
         self.current += 1;
 
@@ -89,9 +95,11 @@ impl Parser {
         Stmt::If(condition, then_branch, else_branch)
     }
 
+    // Parse an expression
     fn expression(&mut self) -> Expr {
         let mut expr = self.term();
 
+        // Parse binary operators
         while let Some(token) = self.peek().cloned() {
             match token {
                 Token::LessEqual | Token::Less | Token::Equal | Token::NotEqual => {
@@ -111,6 +119,7 @@ impl Parser {
         expr
     }
 
+    // Parse a term (number, string, variable, or label)
     fn term(&mut self) -> Expr {
         match self.peek().cloned() {
             Some(Token::Number(n)) => {
@@ -133,14 +142,17 @@ impl Parser {
         }
     }
 
+    // Peek at the current token without consuming it
     fn peek(&self) -> Option<&Token> {
         self.tokens.get(self.current)
     }
 
+    // Check if the current token matches the given token
     fn check(&self, token: Token) -> bool {
         matches!(self.peek(), Some(t) if *t == token)
     }
 
+    // Consume the current token if it matches the given token, otherwise panic
     fn expect(&mut self, token: Token) {
         if self.check(token.clone()) {
             self.current += 1;
@@ -149,6 +161,7 @@ impl Parser {
         }
     }
 
+    // Expect a start token for a for loop ('0' or 'n')
     fn expect_start_token(&mut self) -> Expr {
         match self.peek().cloned() {
             Some(Token::Number(0)) => {
@@ -163,6 +176,7 @@ impl Parser {
         }
     }
 
+    // Expect an end token for a for loop ('0' or 'n')
     fn expect_end_token(&mut self) -> Expr {
         match self.peek().cloned() {
             Some(Token::Number(0)) => {
