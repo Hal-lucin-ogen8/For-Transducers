@@ -90,53 +90,92 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_expr(&mut self, expr: &Expr) -> Value {
-        match expr {
-            Expr::Number(n) => Value::Number(*n),
-            Expr::Str(s) => Value::Str(s.clone()),
-            Expr::Var(name) => {
-                match self.variables.get(name) {
-                    Some(value) => Value::Number(*value),
-                    None => panic!("Variable {} not defined", name),
-                }
+    
+fn evaluate_expr(&mut self, expr: &Expr) -> Value {
+    match expr {
+        Expr::Number(n) => Value::Number(*n),
+        Expr::Str(s) => Value::Str(s.clone()),
+        Expr::Var(name) => {
+            match self.variables.get(name) {
+                Some(value) => Value::Number(*value),
+                None => panic!("Variable {} not defined", name),
             }
-            Expr::Label(name) => {
-                match self.variables.get(name) {
-                    Some(value) => {
-                        if let Some(character) = WORD.chars().nth(*value as usize) {
-                            Value::Str(character.to_string())
-                        } else {
-                            panic!("Index out of bounds");
-                        }
+        }
+        Expr::Label(name) => {
+            match self.variables.get(name) {
+                Some(value) => {
+                    if let Some(character) = WORD.chars().nth(*value as usize) {
+                        Value::Str(character.to_string())
+                    } else {
+                        panic!("Index out of bounds");
                     }
-                    None => panic!("Variable {} not defined", name),
                 }
+                None => panic!("Variable {} not defined", name),
             }
-            Expr::LessEqual(left, right) => {
-                let left_val = self.evaluate_expr(left);
-                let right_val = self.evaluate_expr(right);
-                Value::Number((left_val <= right_val) as i32)
+        }
+        Expr::LessEqual(left, right) | Expr::Less(left, right) | Expr::Equal(left, right) | Expr::NotEqual(left, right) => {
+            let left_val = self.evaluate_expr(left);
+            let right_val = self.evaluate_expr(right);
+    
+            match (left_val, right_val) {
+                // Comparison between two variables that were in the hashmap
+                (Value::Number(lv), Value::Number(rv)) => {
+                    if self.is_variable(left) && self.is_variable(right) {
+                        match expr {
+                            Expr::LessEqual(_, _) => Value::Number((lv <= rv) as i32),
+                            Expr::Less(_, _) => Value::Number((lv < rv) as i32),
+                            Expr::Equal(_, _) => Value::Number((lv == rv) as i32),
+                            Expr::NotEqual(_, _) => Value::Number((lv != rv) as i32), // Add this line
+                            _ => panic!("Unexpected comparison"),
+                        }
+                    } else {
+                        panic!("Invalid comparison: comparison between two labels are disallowed");
+                    }
+                }
+                // Comparison of the type i.label == "some_char"
+                (Value::Str(ls), Value::Str(rs)) => {
+                    if self.is_label(left) && self.is_literal(right) || self.is_literal(left) && self.is_label(right) {
+                        match expr {
+                            Expr::Equal(_, _) => Value::Number((ls == rs) as i32),
+                            Expr::NotEqual(_, _) => Value::Number((ls != rs) as i32), // Add this line
+                            _ => panic!("Invalid comparison: only equality comparison with labels is allowed"),
+                        }
+                    } else {
+                        panic!("Invalid comparison: label can only be compared to a string literal");
+                    }
+                }
+                _ => panic!("Invalid comparison types"),
             }
-            Expr::Less(left, right) => {
-                let left_val = self.evaluate_expr(left);
-                let right_val = self.evaluate_expr(right);
-                Value::Number((left_val < right_val) as i32)
-            }
-            Expr::Equal(left, right) => {
-                let left_val = self.evaluate_expr(left);
-                let right_val = self.evaluate_expr(right);
-                Value::Number((left_val == right_val) as i32)
+        }
+    }
+}
+
+
+    fn is_variable(&self, expr: &Expr) -> bool {
+        match expr {
+            Expr::Var(name) => self.variables.contains_key(name),
+            _ => false,
+        }
+    }
+
+    fn is_label(&self, expr: &Expr) -> bool {
+        matches!(expr, Expr::Label(_))
+    }
+
+    fn is_literal(&self, expr: &Expr) -> bool {
+        matches!(expr, Expr::Str(_))
+    }
+}
+
+    impl Interpreter {
+        fn evaluate_condition(&mut self, expr: &Expr) -> bool {
+            match self.evaluate_expr(expr) {
+                Value::Number(n) => n != 0,
+                Value::Str(_) => panic!("String in condition"),
             }
         }
     }
 
-    fn evaluate_condition(&mut self, expr: &Expr) -> bool {
-        match self.evaluate_expr(expr) {
-            Value::Number(n) => n != 0,
-            Value::Str(_) => panic!("String in condition"),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, PartialOrd)]
 enum Value {

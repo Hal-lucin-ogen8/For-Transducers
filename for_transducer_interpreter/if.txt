@@ -1,5 +1,7 @@
 for i in 0..9 {
-    if i.label == "o" {
+    for j in 0..2 {
+    if i.label != j.label {
         print("Found an h!")
     }
+}
 }

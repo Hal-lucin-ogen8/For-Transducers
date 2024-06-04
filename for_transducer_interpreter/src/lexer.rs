@@ -16,6 +16,7 @@ pub enum Token {
     LessEqual,
     Less,
     Equal,
+    NotEqual,
     Label(String),
 }
 
@@ -97,13 +98,30 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
             '=' => {
                 chars.next();
-                if chars.peek() == Some(&'=') {
-                    chars.next();
-                    tokens.push(Token::Equal);
-                } else {
-                    panic!("Unexpected character: {}", ch);
+                match chars.peek() {
+                    Some(&'=') => {
+                        chars.next();
+                        tokens.push(Token::Equal);
+                    }
+                    _ => {
+                        panic!("Unexpected character: {}", ch);
+                    }
                 }
             }
+
+            '!' => {
+                chars.next();
+                match chars.peek() {
+                    Some(&'=') => {
+                        chars.next();
+                        tokens.push(Token::NotEqual);
+                    }
+                    _ => {
+                        panic!("Unexpected character: {}", ch);
+                    }
+                }
+            }
+            
             '"' => {
                 chars.next();
                 let mut string_literal = String::new();

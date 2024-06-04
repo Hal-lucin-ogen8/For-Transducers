@@ -89,13 +89,14 @@ impl Parser {
         
         while let Some(token) = self.peek().cloned() {
             match token {
-                Token::LessEqual | Token::Less | Token::Equal => {
+                Token::LessEqual | Token::Less | Token::Equal | Token::NotEqual => {
                     self.current += 1;
                     let right = Box::new(self.term());
                     expr = match token {
                         Token::LessEqual => Expr::LessEqual(Box::new(expr), right),
                         Token::Less => Expr::Less(Box::new(expr), right),
                         Token::Equal => Expr::Equal(Box::new(expr), right),
+                        Token::NotEqual => Expr::NotEqual(Box::new(expr), right),
                         _ => unreachable!(),
                     };
                 }
