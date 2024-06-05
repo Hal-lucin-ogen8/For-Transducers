@@ -43,9 +43,11 @@ The interpreter currently supports the following functionalities:
     - Comparisons involving constants and variables, e.g., `i < 3` or `3 < 5`.
   - This ensures that `if` statements are used in a controlled and meaningful manner, avoiding invalid or redundant comparisons.
 
-## To be Done
+- **Input string accepted from user at runtime**
+   - Input string is specified at runtime through the usage `cargo run <transducer> <input>`.
 
-- Taking input word from user.
+**To do**
+Generate an executable so that tranducer is not compiled everytime multiple string inputs are run (?)
 
 ## How to Run
 
@@ -62,6 +64,6 @@ The interpreter currently supports the following functionalities:
    ```
 4. Run the program:
    ```sh
-   cargo run file_name  # file_name is the name of the txt file containing the For_Transducer code
+   cargo run <tranducer_file> <input_string>  # file_name is the name of the txt file containing the For_Transducer code
    ```
 5. The program will execute and display the output. (Note: the current implementation does not take input from the user. The input word is hardcoded in the code. This will be updated in the future.)
