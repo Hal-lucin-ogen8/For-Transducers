@@ -1,20 +1,21 @@
 use crate::ast::{Stmt, Expr};
 use std::collections::HashMap;
 
-// Constants
-static WORD: &str = "hooo";
-static N: i32 = 4;
-
 // Interpreter structure
-pub struct Interpreter {
+pub struct Interpreter<'a> {
     variables: HashMap<String, i32>,
+    word: &'a str,
+    n: i32,
 }
 
-impl Interpreter {
+impl<'a> Interpreter<'a> {
     // Constructor for Interpreter
-    pub fn new() -> Self {
+    pub fn new(word: &'a str) -> Self {
+        let n = word.len() as i32;
         Self {
             variables: HashMap::new(),
+            word,
+            n,
         }
     }
 
@@ -37,7 +38,7 @@ impl Interpreter {
                         let parts: Vec<&str> = s.split('.').collect();
                         if parts.len() == 2 && parts[1] == "label" {
                             if let Some(i) = self.variables.get(parts[0]) {
-                                if let Some(character) = WORD.chars().nth(*i as usize) {
+                                if let Some(character) = self.word.chars().nth(*i as usize) {
                                     println!("{}", character);
                                 } else {
                                     println!("Index out of bounds");
@@ -53,17 +54,15 @@ impl Interpreter {
             }
             // Handle For loops
             Stmt::For(var, direction, body) => {
-                // If direction is false, iterate from 0 to N
                 if *direction == false {
-                    for i in 0..N {
+                    for i in 0..self.n {
                         self.variables.insert(var.clone(), i);
                         self.execute_block(body);
                     }
                     self.variables.remove(var);
                 } else {
-                    // If direction is true, iterate from N-1 to 0
-                    for i in 0..N {
-                        self.variables.insert(var.clone(), N - i - 1);
+                    for i in 0..self.n {
+                        self.variables.insert(var.clone(), self.n - i - 1);
                         self.execute_block(body);
                     }
                     self.variables.remove(var);
@@ -101,7 +100,7 @@ impl Interpreter {
             Expr::Label(name) => {
                 match self.variables.get(name) {
                     Some(value) => {
-                        if let Some(character) = WORD.chars().nth(*value as usize) {
+                        if let Some(character) = self.word.chars().nth(*value as usize) {
                             Value::Str(character.to_string())
                         } else {
                             panic!("Index out of bounds");
