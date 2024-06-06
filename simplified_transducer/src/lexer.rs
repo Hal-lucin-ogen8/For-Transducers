@@ -217,13 +217,37 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                             tokens.push(Token::Label(parts[0].to_string()));
                         }
                     } else {
-                        if let Some(mapped_name) = identifier_map.get(&identifier) {
-                            tokens.push(Token::Identifier(mapped_name.clone()));
+                        if let Some(last_token) = tokens.last() {
+                            match last_token {
+                                Token::For => {
+                                    // Always generate a new name for the identifier if the last token is a For
+                                    identifier_counter += 1;
+                                    let renamed_identifier = format!("X{}", identifier_counter);
+                                    identifier_map.insert(identifier.clone(), renamed_identifier.clone());
+                                    tokens.push(Token::Identifier(renamed_identifier));
+                                }
+                                _ => {
+                                    // Handle identifiers as usual for other preceding tokens
+                                    if let Some(mapped_name) = identifier_map.get(&identifier) {
+                                        tokens.push(Token::Identifier(mapped_name.clone()));
+                                    } else {
+                                        identifier_counter += 1;
+                                        let renamed_identifier = format!("X{}", identifier_counter);
+                                        identifier_map.insert(identifier.clone(), renamed_identifier.clone());
+                                        tokens.push(Token::Identifier(renamed_identifier));
+                                    }
+                                }
+                            }
                         } else {
-                            identifier_counter += 1;
-                            let renamed_identifier = format!("X{}", identifier_counter);
-                            identifier_map.insert(identifier.clone(), renamed_identifier.clone());
-                            tokens.push(Token::Identifier(renamed_identifier));
+                            // Handle case when there is no last token
+                            if let Some(mapped_name) = identifier_map.get(&identifier) {
+                                tokens.push(Token::Identifier(mapped_name.clone()));
+                            } else {
+                                identifier_counter += 1;
+                                let renamed_identifier = format!("X{}", identifier_counter);
+                                identifier_map.insert(identifier.clone(), renamed_identifier.clone());
+                                tokens.push(Token::Identifier(renamed_identifier));
+                            }
                         }
                     }
                 }
