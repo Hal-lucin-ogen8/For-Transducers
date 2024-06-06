@@ -47,7 +47,7 @@ The interpreter currently supports the following functionalities:
    - Input string is specified at runtime through the usage `cargo run <transducer> <input>`.
 
 **To do**
-Generate an executable so that tranducer is not compiled everytime multiple string inputs are run (?)
+Convert the simplified_transducer (implemented till parser) to FOL.
 
 ## How to Run
 
