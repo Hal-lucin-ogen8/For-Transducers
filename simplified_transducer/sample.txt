@@ -1,0 +1,13 @@
+for i in n..0 {
+    for j in 0..n {
+        if j == i {
+            print(i.label)
+        } else {
+            print("#")
+        }
+    }
+}
+
+for i in 0..n {
+    print("lmao")
+}
