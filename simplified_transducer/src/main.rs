@@ -1,7 +1,9 @@
 use std::env;
 use std::fs;
 use simplified_transducer::{tokenize, Parser};
-use simplified_transducer::parser::print_ast; // Import the print_ast function
+//use simplified_transducer::parser::print_ast; // Import the print_ast function
+mod label;
+use label::traverse_and_label;
 
 fn main() {
     // Collect command-line arguments
@@ -15,7 +17,7 @@ fn main() {
     let script = fs::read_to_string(&args[1]).expect("Unable to read script file");
 
     // Get the string
-    let input_string = &args[2];
+    let _input_string = &args[2];
 
     // Tokenize the script
     let tokens = tokenize(&script);
@@ -25,8 +27,16 @@ fn main() {
     let stmts = parser.parse();
 
     // Print the AST
-    print_ast(&stmts, 0);
+    let mut path = Vec::new();
+    let mut labels = Vec::new();
 
+    // Traverse the AST and label print statements
+    traverse_and_label(&stmts, &mut path, &mut labels);
+
+    // Print the labels
+    for label in labels {
+        println!("{:?}", label);
+    }
     // Interpret the AST
     // let mut interpreter = Interpreter::new(input_string);
     // interpreter.interpret(stmts);

@@ -108,6 +108,15 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     tokens.push(Token::Less);
                 }
             }
+            '>' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::GreaterEqual);
+                } else {
+                    tokens.push(Token::Greater);
+                }
+            }
             '=' => {
                 chars.next();
                 if chars.peek() == Some(&'=') {

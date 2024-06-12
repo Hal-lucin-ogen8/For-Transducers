@@ -1,0 +1,13 @@
+for i in 0..n {
+   for j in n..0 {
+      if i >= j {
+        print("meow")
+        print("waow")
+      } else {
+        print(j.label)
+      }
+      print(i.label)
+   }
+   print("hehehe")
+}
+print("hmmm")
