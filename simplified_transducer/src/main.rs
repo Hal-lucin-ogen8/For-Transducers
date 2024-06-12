@@ -1,7 +1,7 @@
 use std::env;
 use std::fs;
 use simplified_transducer::{tokenize, Parser};
-//use simplified_transducer::parser::print_ast; // Import the print_ast function
+use simplified_transducer::parser::print_ast; // Import the print_ast function
 mod label;
 use label::traverse_and_label;
 
@@ -37,6 +37,7 @@ fn main() {
     for label in labels {
         println!("{:?}", label);
     }
+    print_ast(&stmts,0);
     // Interpret the AST
     // let mut interpreter = Interpreter::new(input_string);
     // interpreter.interpret(stmts);

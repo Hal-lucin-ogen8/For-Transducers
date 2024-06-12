@@ -1,13 +1,13 @@
 for i in 0..n {
    for j in n..0 {
       if i >= j {
-        print("meow")
-        print("waow")
+        print("print1")
+        print("print2")
       } else {
         print(j.label)
       }
       print(i.label)
    }
-   print("hehehe")
+   print("print3")
 }
-print("hmmm")
+print("print4")
