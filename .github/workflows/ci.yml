@@ -26,5 +26,5 @@ jobs:
       - name: Build
         run: cd simplified_transducer && cargo build --all-targets --verbose
       - name: Test
-        run: cargo test examples/label.txt "abc"
+        run: cargo test examples/label.txt abc
 
