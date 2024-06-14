@@ -52,9 +52,9 @@ fn main() {
 
         let (label_formula_a, label_formula_b, label_formula_hash) = &label_formulas[i];
         println!("Label: {:?}, Universe Formula({}): {}", label, vars_str, formula_str);
-        println!("    Label Formula 'a': {}", label_formula_a);
-        println!("    Label Formula 'b': {}", label_formula_b);
-        println!("    Label Formula '#': {}", label_formula_hash);
+        println!("    Label Formula(a)({}): {}",vars_str, label_formula_a);
+        println!("    Label Formula(b)({}): {}",vars_str, label_formula_b);
+        println!("    Label Formula(#)({}): {}",vars_str, label_formula_hash);
     }
     //print_ast(&stmts,0);
     // Interpret the AST
