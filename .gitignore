@@ -1,2 +1,14 @@
 ./for_transducer_interpreter/target/
 ./simplified_transducer/target/
+*.aux
+*.pdf
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.dvi
+*.kaux

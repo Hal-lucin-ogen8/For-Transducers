@@ -1,0 +1,113 @@
+\documentclass[11pt]{article}
+
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{tikz}
+
+\usepackage[cleveref,xcolor,hyperref]{knowledge}
+\knowledgeconfigure{notion}
+
+\newcommand{\defined}{\coloneqq}
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\Rel}{\mathbb{Z}}
+\newcommand{\Bool}{\mathbb{B}}
+\newcommand{\set}[1]{\{#1\}}
+\newcommand{\setof}[2]{\{#1 \mid #2\}}
+
+\newcommand{\Vars}{\mathbb{V}}
+
+\newcommand{\forCmd}{\kl[\forCmd]{\text{prog}}}
+\knowledge{\forCmd}{notion}
+
+\newcommand{\forBool}{\kl[\forBool]{\text{boolexpr}}}
+\knowledge{\forBool}{notion}
+
+\newcommand{\forString}{\kl[\forString]{\text{stringexpr}}}
+\knowledge{\forString}{notion}
+
+\newcommand{\last}{\mathsf{last}}
+\newcommand{\first}{\mathsf{first}}
+
+\newcommand{\For}[3]{\mathsf{for}^{#2} #1. #3}
+\newcommand{\If}[3]{\mathsf{if} \, #1 \, \mathsf{then} %
+\, #2 \, \mathsf{else} \, #3}
+\newcommand{\NoOp}{\mathsf{nop}}
+\newcommand{\Seq}[2]{#1 \, ; \, #2}
+\newcommand{\Print}[1]{\mathsf{print} \, #1}
+
+
+\title{Automatic Verification of For Programs}
+\author{TODO}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    In this document we present the theoretical basis for
+    the automated verification of polyregular functions.
+    These are string to string functions described using
+    for-loops. We show how to efficiently translate such functions
+    into first-order (resp. monadic second-order) logic formulas
+    and how this can effectively be leveraged to verify
+    properties of these functions.
+\end{abstract}
+
+\section{Introduction}
+
+In this document we present the theoretical basis for
+the automated verification of polyregular functions.
+
+
+\section{Preliminaries}
+
+\subsection{Syntax of Variable Free For Programs}
+
+\begin{figure}[h]
+\begin{align*}
+    \intro*\forCmd \defined & \,\, \For{x}{d}{\reintro*\forCmd} & 
+                        d \in \set{ \leftarrow, \rightarrow },
+                        x \in \Vars
+                       \\
+                &\mid  \If{\forBool}{\reintro*\forCmd}{\reintro*\forCmd} \\
+                &\mid  \NoOp \\
+                &\mid  \Seq{\reintro*\forCmd}{\reintro*\forCmd} \\
+                &\mid  \Print{\forString}
+\end{align*}
+\caption{Syntax of For Programs}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{align*}
+        \intro*\forBool \defined & \,\,  a(x) & a \in \Sigma, x \in \Vars \\
+                            &\mid  \reintro*\forBool \land \reintro*\forBool \\
+                            &\mid  \reintro*\forBool \lor \reintro*\forBool \\
+                            &\mid  \lnot \reintro*\forBool \\
+                            &\mid  x \leq y  & x,y \in \Vars \\
+                            &\mid  x = y & x,y \in \Vars \\
+                            &\mid  x = y + 1 & x,y \in \Vars \\
+                            &\mid  \last(x) & x,y \in \Vars \\
+                            &\mid  \first(x) & x,y \in \Vars \\
+    \end{align*}
+    \caption{Syntax of Boolean Expressions}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{align*}
+        \intro*\forString
+        \defined & \,\, x & x \in \Vars \\
+                 & \mid w \in \Sigma^* \\
+    \end{align*}
+    \caption{Syntax of String Expressions}
+\end{figure}
+
+\subsection{Denotational Semantics of Variable-Free For Programs}
+
+\subsection{Simplified Syntax}
+
+\end{document}
