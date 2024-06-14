@@ -2,7 +2,9 @@ for i in 0..n {
    for j in n..0 {
       if i >= j {
         print("print1")
+        if i.label == "a"{
         print("print2")
+        }
       } else {
         print(j.label)
       }

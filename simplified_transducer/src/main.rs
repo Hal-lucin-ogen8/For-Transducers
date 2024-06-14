@@ -31,17 +31,26 @@ fn main() {
     let mut labels = Vec::new();
     let mut universe_formulas = Vec::new();
 
-    // Traverse the AST and label print statements
-    traverse_and_label(&stmts, &mut path, &mut labels, None, &mut universe_formulas);
+    let mut for_vars = Vec::new();
+
+    // Traverse the AST and label print statements and generate universe formulas
+    traverse_and_label(&stmts, &mut path, &mut labels, None, &mut universe_formulas, &mut for_vars);
+
 
     // Print the labels
     for (i, label) in labels.iter().enumerate() {
-        let universe_formula = universe_formulas.get(i);
-        let formula_str = match universe_formula {
-            Some(expr) => expr.to_string(),
-            None => "T".to_string(),
+        let (vars, universe_formula) = &universe_formulas[i];
+        let vars_str = if vars.is_empty() {
+            "".to_string()
+        } else {
+            vars.join(", ")
         };
-        println!("Label: {:?}, Universe Formula: {}", label, formula_str);
+        let formula_str = if universe_formula.to_string() == "true" {
+            "T".to_string()
+        } else {
+            universe_formula.to_string()
+        };
+        println!("Label: {:?}, Universe Formula({}): {}", label, vars_str, formula_str);
     }
     //print_ast(&stmts,0);
     // Interpret the AST
