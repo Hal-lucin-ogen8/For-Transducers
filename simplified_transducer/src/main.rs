@@ -1,6 +1,6 @@
+use simplified_transducer::{tokenize, Parser};
 use std::env;
 use std::fs;
-use simplified_transducer::{tokenize, Parser};
 //use simplified_transducer::parser::print_ast; // Import the print_ast function
 mod label;
 use label::traverse_and_label;
@@ -8,7 +8,7 @@ use label::traverse_and_label;
 fn main() {
     // Collect command-line arguments
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
+    if args.len() <= 2 {
         println!("Usage: {} <script> <string>", args[0]);
         return;
     }
@@ -34,7 +34,15 @@ fn main() {
     let mut label_formulas = Vec::new();
 
     // Traverse the AST and label print statements and generate universe formulas and label formulas
-    traverse_and_label(&stmts, &mut path, &mut labels, None, &mut universe_formulas, &mut for_vars, &mut label_formulas);
+    traverse_and_label(
+        &stmts,
+        &mut path,
+        &mut labels,
+        None,
+        &mut universe_formulas,
+        &mut for_vars,
+        &mut label_formulas,
+    );
 
     // Print the labels, corresponding universe formulas, and label formulas
     for (i, label) in labels.iter().enumerate() {
@@ -51,10 +59,13 @@ fn main() {
         };
 
         let (label_formula_a, label_formula_b, label_formula_hash) = &label_formulas[i];
-        println!("Label: {:?}, Universe Formula({}): {}", label, vars_str, formula_str);
-        println!("    Label Formula(a)({}): {}",vars_str, label_formula_a);
-        println!("    Label Formula(b)({}): {}",vars_str, label_formula_b);
-        println!("    Label Formula(#)({}): {}",vars_str, label_formula_hash);
+        println!(
+            "Label: {:?}, Universe Formula({}): {}",
+            label, vars_str, formula_str
+        );
+        println!("    Label Formula(a)({}): {}", vars_str, label_formula_a);
+        println!("    Label Formula(b)({}): {}", vars_str, label_formula_b);
+        println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
     }
     //print_ast(&stmts,0);
     // Interpret the AST
