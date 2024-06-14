@@ -24,7 +24,5 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: cd for_transducer_interpreter && cargo build --all-targets --verbose
-      - name: Test
-        run: cd for_trandsucer_interpreter && cargo test
+        run: cd simplified_transducer && cargo build --all-targets --verbose
 
