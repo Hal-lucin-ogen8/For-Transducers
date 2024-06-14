@@ -1,3 +1,4 @@
 [submodule "MONA"]
 	path = MONA
 	url = git@github.com:cs-au-dk/MONA.git
+    ignore = dirty
