@@ -20,5 +20,8 @@ pkgs.buildEnv {
     pkgs.cvc5
     # z3 prover
     pkgs.z3
+    # latex building environment
+    # only light version 
+    pkgs.texlive.combined.scheme-small
   ];
 }
