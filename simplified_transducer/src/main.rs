@@ -8,7 +8,7 @@ use label::traverse_and_label;
 fn main() {
     // Collect command-line arguments
     let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
+    if args.len() != 2 {
         println!("Usage: {} <script> <string>", args[0]);
         return;
     }
@@ -17,7 +17,7 @@ fn main() {
     let script = fs::read_to_string(&args[1]).expect("Unable to read script file");
 
     // Get the string
-    let _input_string = &args[2];
+    //let _input_string = &args[2];
 
     // Tokenize the script
     let tokens = tokenize(&script);

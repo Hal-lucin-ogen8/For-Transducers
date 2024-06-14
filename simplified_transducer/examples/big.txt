@@ -1,0 +1,34 @@
+for i in 0..n {
+    for j in n..0 {
+        if i == j {
+            print("#")
+            
+            for k in 0..n {
+                if k.label == "a" {
+                    print("a")
+                }
+            }
+        }
+        
+        if i.label == "b" {
+            print("b")
+            
+            for m in 0..n {
+                if m >= j {
+                    print(m.label)
+                }
+            }
+        }
+        
+        if i >= j {
+            for p in 0..n {
+                if p.label == "#" {
+                    print(p.label)
+                }
+            }
+        }
+    }
+}
+
+print("a")
+print("#")
