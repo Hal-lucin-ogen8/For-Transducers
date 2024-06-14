@@ -325,5 +325,16 @@ fn print_bexpr(expr: &Bexpr, indent: usize) {
             print_bexpr(expr, indent + 2);
         }
         Bexpr::Label(label) => println!("{}Label: {}", indent_str, label),
+        Bexpr::And(left, right) => {
+            println!("{}And:", indent_str);
+            print_bexpr(left, indent + 2);
+            print_bexpr(right, indent + 2);
+        }
+        Bexpr::Or(left, right) => {
+            println!("{}Or:", indent_str);
+            print_bexpr(left, indent + 2);
+            print_bexpr(right, indent + 2);
+        }
+        
     }
 }
