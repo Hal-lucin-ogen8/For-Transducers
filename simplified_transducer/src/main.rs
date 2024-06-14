@@ -30,14 +30,13 @@ fn main() {
     let mut path = Vec::new();
     let mut labels = Vec::new();
     let mut universe_formulas = Vec::new();
-
     let mut for_vars = Vec::new();
+    let mut label_formulas = Vec::new();
 
-    // Traverse the AST and label print statements and generate universe formulas
-    traverse_and_label(&stmts, &mut path, &mut labels, None, &mut universe_formulas, &mut for_vars);
+    // Traverse the AST and label print statements and generate universe formulas and label formulas
+    traverse_and_label(&stmts, &mut path, &mut labels, None, &mut universe_formulas, &mut for_vars, &mut label_formulas);
 
-
-    // Print the labels
+    // Print the labels, corresponding universe formulas, and label formulas
     for (i, label) in labels.iter().enumerate() {
         let (vars, universe_formula) = &universe_formulas[i];
         let vars_str = if vars.is_empty() {
@@ -45,12 +44,17 @@ fn main() {
         } else {
             vars.join(", ")
         };
-        let formula_str = if universe_formula.to_string() == "true" {
+        let formula_str = if universe_formula.to_string() == "T" {
             "T".to_string()
         } else {
             universe_formula.to_string()
         };
+
+        let (label_formula_a, label_formula_b, label_formula_hash) = &label_formulas[i];
         println!("Label: {:?}, Universe Formula({}): {}", label, vars_str, formula_str);
+        println!("    Label Formula 'a': {}", label_formula_a);
+        println!("    Label Formula 'b': {}", label_formula_b);
+        println!("    Label Formula '#': {}", label_formula_hash);
     }
     //print_ast(&stmts,0);
     // Interpret the AST

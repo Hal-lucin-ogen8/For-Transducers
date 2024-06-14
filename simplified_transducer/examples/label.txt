@@ -1,15 +1,15 @@
 for i in 0..n {
    for j in n..0 {
       if i >= j {
-        print("print1")
+        print("a")
         if i.label == "a"{
-        print("print2")
+        print("b")
         }
       } else {
         print(j.label)
       }
       print(i.label)
    }
-   print("print3")
+   print("#")
 }
-print("print4")
+print("ab")
