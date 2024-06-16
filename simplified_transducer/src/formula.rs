@@ -1,21 +1,30 @@
+type VarName = String;
+
 #[derive(Debug)]
-pub enum Formula<'a> {
-    Var('a str),
-    Less(Box<Formula<'a>>, Box<Formula<'a>>),
-    Greater(Box<Formula<'a>>, Box<Formula<'a>>),
-    LessEqual(Box<Formula<'a>>, Box<Formula<'a>>),
-    GreaterEqual(Box<Formula<'a>>, Box<Formula<'a>>),
-    Equal(Box<Formula<'a>>, Box<Formula<'a>>),
-    NotEqual(Box<Formula<'a>>, Box<Formula<'a>>),
-    A(Box<Formula<'a>>),
-    NotA(Box<Formula<'a>>),
-    Or(Box<Formula<'a>>, Box<Formula<'a>>),
-    And(Box<Formula<'a>>, Box<Formula<'a>>),
-    Not(Box<Formula<'a>>),
+pub enum Formula {
+    // Constants
+    True,
+    False,
+    // Basic tests
+    Less(VarName, VarName),
+    Equal(VarName, VarName),
+    NotEqual(VarName, VarName),
+    Greater(VarName, VarName),
+    GreaterEqual(VarName, VarName),
+    IsLetter(VarName, String),
+    IsNotLetter(VarName, String),
+    // Combinators
+    Or(Box<Formula>, Box<Formula>),
+    And(Box<Formula>, Box<Formula>),
+    Not(Box<Formula>),
 }
 
-pub struct Interpreter<'a> {
-    pub universe: fn(&'a str) -> Formula<'a>,
-    pub order: fn(&'a str, &'a str) -> Formula<'a>,
-    pub letter: fn(&'a str, &'a str, &'a str) -> Formula<'a>,
+type Arity = usize;
+type Names = Vec<VarName>;
+
+pub struct Interpretation<D> {
+    pub dimension: Vec<(D, Arity)>,
+    pub universe:  fn(D, Names) -> Formula,
+    pub order:     fn(D, Names, D, Names) -> Formula,
+    pub letter:    fn(D, Names) -> Formula,
 }
