@@ -183,4 +183,12 @@ Total time: 00:00:00.00
 [MONA]: https://github.com/cs-au-dk/MONA
 
 
+## Gaston
+
+There is also [Gaston], a solver for the monadic second order logic on finite
+words. However it is also not maintained anymore, and has no documentation.
+It seems to accept the same syntax as [MONA] based on the example
+folder of the github repository.
+
+[Gaston]: https://github.com/tfiedor/gaston
 
