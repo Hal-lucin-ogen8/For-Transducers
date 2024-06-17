@@ -1,3 +1,6 @@
+use crate::formula::{Formula as MonoFormula, Interpretation as MonoInterpretation};
+
+use std::fs::File;
 /// This module contains the implementation of the
 /// `TwoSortedFormulas` logic, with one sort
 /// being finite with equality,
@@ -13,540 +16,466 @@
 ///    | a(x)   (a in Σ, x : P)
 ///    | x = l \in L
 ///
-use std::fmt::{Display, Formatter};
-use crate::formula::{Formula as MonoFormula, Interpretation as MonoInterpretation};
+// use File write
+use std::io::Write;
+use tempfile::tempdir;
 
-
-type Letter = usize;
-
-/// Let us define an alphabet
-/// as a struct so that we can
-/// use it.
-#[derive(Debug)]
-pub struct Alphabet {
-    /// Names of every letter for display purposes
-    pub names: Vec<String>,
+pub trait ToSmtSolver {
+    fn to_alt_ergo(&self) -> String;
+    fn to_smtlib(&self) -> String;
+    fn to_mona(&self) -> String;
 }
 
-impl Alphabet {
-    /// Create a new alphabet
-    pub fn new() -> Self {
-        Alphabet {
-            names: vec![],
-        }
-    }
-
-    /// Add a new letter with a given name
-    pub fn add_letter(&mut self, name: String) {
-        self.names.push(name);
-    }
+#[derive(Debug, Clone)]
+pub enum Sort {
+    Label,
+    Position,
 }
 
-impl Default for Alphabet {
-    fn default() -> Self {
-        Alphabet {
-            names: vec!["a".to_string(), "b".to_string()],
-        }
-    }
+#[derive(Debug, Clone)]
+pub enum DefaultAlphabet {
+    A,
+    B,
+    C,
+    Hash,
 }
 
-impl Display for Alphabet {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{{}}}", self.names.join(", "))
+#[derive(Debug, Clone)]
+pub struct DefaultLabel {
+    position: Vec<u32>,
+}
+
+impl ToSmtSolver for DefaultAlphabet {
+    fn to_smtlib(&self) -> String {
+        format!("{:?}", self)
+    }
+    fn to_mona(&self) -> String {
+        format!("{:?}", self)
+    }
+    fn to_alt_ergo(&self) -> String {
+        format!("{:?}", self)
     }
 }
 
-/// The first step is to define what is a finite
-/// sort L with arities.
-#[derive(Debug)]
-pub struct Labels {
-    /// Names of every variable for display purposes
-    pub names: Vec<String>,
-    /// Arity of every variable
-    pub arity: Vec<usize>,
-}
-
-impl Display for Labels {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{")?;
-        for (name, arity) in self.names.iter().zip(self.arity.iter()) {
-            write!(f, "{}: {}, ", name, arity)?;
-        }
-        write!(f, "}}")?;
-        Ok(())
+impl ToSmtSolver for DefaultLabel {
+    fn to_smtlib(&self) -> String {
+        let val = self
+            .position
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join("-");
+        format!("label-{}", val)
+    }
+    fn to_mona(&self) -> String {
+        let val = self
+            .position
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join("x");
+        format!("D{}", val)
+    }
+    fn to_alt_ergo(&self) -> String {
+        let val = self
+            .position
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join("_");
+        format!("D{}", val)
     }
 }
 
-impl Labels {
-    /// Create a new set of labels
-    pub fn new() -> Self {
-        Labels {
-            names: vec![],
-            arity: vec![],
-        }
-    }
-
-    /// Add a new label with a given name and arity
-    pub fn add_label(&mut self, name: String, arity: usize) {
-        self.names.push(name);
-        self.arity.push(arity);
-    }
-}
-
-impl Default for Labels {
-    fn default() -> Self {
-        Labels {
-            names: vec!["l1".to_string(), "l2".to_string(), "l3".to_string()],
-            arity: vec![3, 2, 1],
-        }
-    }
-}
-
-/// The second step is to define the formulas
-/// over a finite set of labels.
-type LabelName = usize;
-type FormulaId = u16;
 type VarName = String;
+type Variable = (VarName, Sort);
+
+impl ToSmtSolver for Variable {
+    fn to_mona(&self) -> String {
+        let (name, sort) = self;
+        match sort {
+            Sort::Label => format!("label_{}", name),
+            Sort::Position => format!("pos_{}", name),
+        }
+    }
+
+    fn to_smtlib(&self) -> String {
+        let (name, sort) = self;
+        match sort {
+            Sort::Label => format!("label-{}", name),
+            Sort::Position => format!("pos-{}", name),
+        }
+    }
+
+    fn to_alt_ergo(&self) -> String {
+        let (name, sort) = self;
+        match sort {
+            Sort::Label => format!("l{}", name),
+            Sort::Position => format!("p{}", name),
+        }
+    }
+}
+
+/// We construct a functor for formulas
+/// where the fixedpoint is not done.
+/// S : sorts
+/// F : formulas
+/// A : alphabet
+///
+#[derive(Debug)]
+pub enum FormulaF<F, A, S> {
+    /// `exists x:S. φ`
+    Exists(VarName, Sort, F),
+    /// `exists x:S. φ`
+    Forall(VarName, Sort, F),
+    /// φ ∧ φ
+    And(F, F),
+    /// φ ∨ φ
+    Or(F, F),
+    /// φ → φ
+    Implies(F, F),
+    /// φ ↔ φ
+    Iff(F, F),
+    /// ¬φ
+    Not(F),
+    /// x = y  (of sort Label or Position)
+    Equal(Sort, VarName, VarName),
+    /// x <= y (of sort Position)
+    LessEqual(VarName, VarName),
+    /// a(x) (a in Σ, x : P)
+    LetterAtPos(VarName, A),
+    /// x = constant
+    EqualConstant(VarName, S),
+    /// True
+    True,
+    /// False
+    False,
+}
+
+impl<A, S> ToSmtSolver for FormulaF<String, A, S>
+where
+    A: ToSmtSolver, // alphabet
+    S: ToSmtSolver, // labels
+{
+    fn to_alt_ergo(&self) -> String {
+        match self {
+            FormulaF::True => "true".to_string(),
+            FormulaF::False => "false".to_string(),
+            FormulaF::Exists(var, Sort::Label, inner) => {
+                format!("exists {} : label. {}", var, inner)
+            }
+            FormulaF::Exists(var, Sort::Position, inner) => {
+                format!(
+                    "exists {var} : int. 0 <= {var} and {var} <= len and ({})",
+                    inner
+                )
+            }
+            FormulaF::Forall(var, Sort::Label, inner) => {
+                format!("forall {} : label. {}", var, inner)
+            }
+            FormulaF::Forall(var, Sort::Position, inner) => {
+                format!(
+                    "forall {var} : int. (0 <= {var} and {var} <= len) -> ({})",
+                    inner
+                )
+            }
+            FormulaF::And(left, right) => format!("({} and {})", left, right),
+            FormulaF::Or(left, right) => format!("({} or {})", left, right),
+            FormulaF::Implies(left, right) => format!("({} -> {})", left, right),
+            FormulaF::Iff(left, right) => format!("({} <-> {})", left, right),
+            FormulaF::Not(inner) => format!("not {}", inner),
+            FormulaF::Equal(_, left, right) => format!("{} = {}", left, right),
+            FormulaF::LessEqual(left, right) => format!("{} <= {}", left, right),
+            FormulaF::LetterAtPos(var, letter) => {
+                format!("is_letter_{}({})", letter.to_alt_ergo(), var)
+            }
+            FormulaF::EqualConstant(var, value) => format!("{} = {}", var, value.to_alt_ergo()),
+        }
+    }
+
+    /// Convert a formula to the SMT-LIB format.
+    /// Roughly speaking this is of the following form:
+    /// (assert (exists ((l Label)) (forall ((x Int)) (=> (and (<= 0 x) (<= x len)) (=> (= l label_a) (= (select word x) letter_a)))))
+    fn to_smtlib(&self) -> String {
+        match self {
+            FormulaF::True => "true".to_string(),
+            FormulaF::False => "false".to_string(),
+            FormulaF::Exists(var, Sort::Label, inner) => {
+                format!("(exists (({var} Label)) {inner}) ", var = var)
+            }
+            FormulaF::Exists(var, Sort::Position, inner) => {
+                format!("(exists (({var} Int)) (and (<= 0 {var}) (< {var} len) {inner}))")
+            }
+            FormulaF::Forall(var, Sort::Label, inner) => {
+                format!("(forall (({var} Label)) {inner})")
+            }
+            FormulaF::Forall(var, Sort::Position, inner) => {
+                format!("(forall (({var} Int)) (=> (and (<= 0 {var}) (< {var} len)) {inner}))")
+            }
+            FormulaF::And(left, right) => format!("(and {} {}) ", left, right),
+            FormulaF::Or(left, right) => format!("(or {} {}) ", left, right),
+            FormulaF::Implies(left, right) => format!("(=> {} {}) ", left, right),
+            FormulaF::Iff(left, right) => format!("(= {} {}) ", left, right),
+            FormulaF::Not(inner) => format!("(not {}) ", inner),
+            FormulaF::Equal(_, left, right) => format!("(= {} {}) ", left, right),
+            FormulaF::LessEqual(left, right) => format!("(<= {} {}) ", left, right),
+            FormulaF::LetterAtPos(var, letter) => {
+                format!("(= (word {}) {}) ", var, letter.to_smtlib())
+            }
+            FormulaF::EqualConstant(var, value) => format!("(= {} {}) ", var, value.to_smtlib()),
+        }
+    }
+
+    /// Convert a formula to the MONA format.
+    ///
+    /// assert (L inter W = empty);
+    /// assert (all1 x: (x in L) | (x in W));
+    fn to_mona(&self) -> String {
+        match self {
+            FormulaF::True => "true".to_string(),
+            FormulaF::False => "false".to_string(),
+            FormulaF::Exists(var, sort, inner) => {
+                let sort_str = match sort {
+                    Sort::Label => "L",
+                    Sort::Position => "W",
+                };
+                format!("ex1 {var}: ({var} in {sort_str}) & ({inner})")
+            }
+            FormulaF::Forall(var, sort, inner) => {
+                let sort_str = match sort {
+                    Sort::Label => "L",
+                    Sort::Position => "W",
+                };
+                format!("all1 {var}: ({var} in {sort_str}) => ({inner})")
+            }
+            FormulaF::And(left, right) => format!("({} & {})", left, right),
+            FormulaF::Or(left, right) => format!("({} | {})", left, right),
+            FormulaF::Implies(left, right) => format!("({} => {})", left, right),
+            FormulaF::Iff(left, right) => format!("({} <=> {})", left, right),
+            FormulaF::Not(inner) => format!("~({})", inner),
+            FormulaF::Equal(_, left, right) => format!("{} = {}", left, right),
+            FormulaF::LessEqual(left, right) => format!("{} <= {}", left, right),
+            FormulaF::LetterAtPos(var, letter) => {
+                let letter = letter.to_smtlib();
+                format!("{var} in L{letter}")
+            }
+            FormulaF::EqualConstant(var, value) => format!("{} in D{}", var, value.to_mona()),
+        }
+    }
+}
+
+pub fn map_formula<A, F, S, H, G>(formula: &FormulaF<F, A, S>, f: G) -> FormulaF<H, A, S>
+where
+    S: Clone,
+    A: Clone,
+    G: Fn(&F) -> H,
+{
+    match formula {
+        FormulaF::True => FormulaF::True,
+        FormulaF::False => FormulaF::False,
+        FormulaF::Exists(var, sort, inner) => {
+            let new_inner = f(inner);
+            FormulaF::Exists(var.clone(), sort.clone(), new_inner)
+        }
+        FormulaF::Forall(var, sort, inner) => {
+            let new_inner = f(inner);
+            FormulaF::Forall(var.clone(), sort.clone(), new_inner)
+        }
+        FormulaF::And(left, right) => {
+            let new_left = f(left);
+            let new_right = f(right);
+            FormulaF::And(new_left, new_right)
+        }
+        FormulaF::Or(left, right) => {
+            let new_left = f(left);
+            let new_right = f(right);
+            FormulaF::Or(new_left, new_right)
+        }
+        FormulaF::Implies(left, right) => {
+            let new_left = f(left);
+            let new_right = f(right);
+            FormulaF::Implies(new_left, new_right)
+        }
+        FormulaF::Iff(left, right) => {
+            let new_left = f(left);
+            let new_right = f(right);
+            FormulaF::Iff(new_left, new_right)
+        }
+        FormulaF::Not(inner) => {
+            let new_inner = f(inner);
+            FormulaF::Not(new_inner)
+        }
+        FormulaF::Equal(sort, left, right) => {
+            FormulaF::Equal(sort.clone(), left.clone(), right.clone())
+        }
+        FormulaF::LessEqual(left, right) => FormulaF::LessEqual(left.clone(), right.clone()),
+        FormulaF::LetterAtPos(var, letter) => FormulaF::LetterAtPos(var.clone(), letter.clone()),
+        FormulaF::EqualConstant(var, sort) => FormulaF::EqualConstant(var.clone(), sort.clone()),
+    }
+}
 
 #[derive(Debug)]
-pub enum FormulaExpr {
-    /// basic formulas
-    True,
-    False,
-    /// Logical connectives
-    And(FormulaId, FormulaId),
-    Or(FormulaId, FormulaId),
-    Implies(FormulaId, FormulaId),
-    Iff(FormulaId, FormulaId),
-    Not(FormulaId),
-    /// Quantifiers over labels
-    ExistsLabel(VarName, FormulaId),
-    ForallLabel(VarName, FormulaId),
-    /// Quantifiers over positions
-    ExistsPos(VarName, FormulaId),
-    ForallPos(VarName, FormulaId),
-    /// Positional relations
-    EqualPos(VarName, VarName),
-    LessEqualPos(VarName, VarName),
-    LetterAtPos(VarName, Letter),
-    /// Label relations
-    EqualLabel(VarName, LabelName),
+pub struct FormulaR<A, S> {
+    inside: FormulaF<Box<FormulaR<A, S>>, A, S>,
 }
 
-pub struct Formula {
-    pub alphabet: Alphabet,
-    pub labels: Labels,
-    pub exprs: Vec<FormulaExpr>,
-    pub root: FormulaId,
+pub fn fold_formula<A, S, T, F>(formula: &FormulaR<A, S>, f: &F) -> T
+where
+    A: Clone,
+    S: Clone,
+    F: Fn(&FormulaF<T, A, S>) -> T,
+{
+    let inner = &formula.inside;
+    let induction = map_formula(inner, |inner| fold_formula(inner, f));
+    f(&induction)
 }
 
-impl Formula {
-    pub fn new(alphabet: Alphabet, labels: Labels) -> Self {
-        Formula {
-            alphabet,
-            labels,
-            exprs: vec![],
-            root: 0,
+impl<A, S> ToSmtSolver for FormulaR<A, S>
+where
+    A: ToSmtSolver + Clone,
+    S: ToSmtSolver + Clone,
+{
+    fn to_alt_ergo(&self) -> String {
+        fold_formula(self, &|formula| formula.to_alt_ergo())
+    }
+
+    fn to_smtlib(&self) -> String {
+        fold_formula(self, &|formula| formula.to_smtlib())
+    }
+
+    fn to_mona(&self) -> String {
+        fold_formula(self, &|formula| formula.to_mona())
+    }
+}
+
+impl<A, S> FormulaR<A, S> {
+    fn and(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::And(Box::new(self), Box::new(other)),
         }
     }
 
-    pub fn add_expr(&mut self, expr: FormulaExpr) -> FormulaId {
-        self.exprs.push(expr);
-        (self.exprs.len() - 1) as FormulaId
-    }
-
-    pub fn letter_name(&self, letter: Letter) -> &str {
-        &self.alphabet.names[letter]
-    }
-
-    pub fn label_name(&self, label: LabelName) -> &str {
-        &self.labels.names[label]
-    }
-
-    pub fn print_formula(&self, buf: &mut String) -> () {
-        self.print_formula_rec(self.root, buf)
-    }
-
-    fn print_formula_rec(&self, fid: FormulaId, buf: &mut String) -> () {
-        match &self.exprs[fid as usize] {
-            FormulaExpr::True => buf.push_str("T"),
-            FormulaExpr::False => buf.push_str("F"),
-            FormulaExpr::And(left, right) => {
-                buf.push_str("(");
-                self.print_formula_rec(*left, buf);
-                buf.push_str(" ∧ ");
-                self.print_formula_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Or(left, right) => {
-                buf.push_str("(");
-                self.print_formula_rec(*left, buf);
-                buf.push_str(" ∨ ");
-                self.print_formula_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Implies(left, right) => {
-                buf.push_str("(");
-                self.print_formula_rec(*left, buf);
-                buf.push_str(" → ");
-                self.print_formula_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Iff(left, right) => {
-                buf.push_str("(");
-                self.print_formula_rec(*left, buf);
-                buf.push_str(" ↔ ");
-                self.print_formula_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Not(inner) => {
-                buf.push_str("¬");
-                self.print_formula_rec(*inner, buf);
-            }
-            FormulaExpr::ExistsLabel(var, inner) => {
-                buf.push_str("∃");
-                buf.push_str(var);
-                buf.push_str(":L. ");
-                self.print_formula_rec(*inner, buf);
-            }
-            FormulaExpr::ForallLabel(var, inner) => {
-                buf.push_str("∀");
-                buf.push_str(var);
-                buf.push_str(":L. ");
-                self.print_formula_rec(*inner, buf);
-            }
-            FormulaExpr::ExistsPos(var, inner) => {
-                buf.push_str("∃");
-                buf.push_str(var);
-                buf.push_str(":P. ");
-                self.print_formula_rec(*inner, buf);
-            }
-            FormulaExpr::ForallPos(var, inner) => {
-                buf.push_str("∀");
-                buf.push_str(var);
-                buf.push_str(":P. ");
-                self.print_formula_rec(*inner, buf);
-            }
-            FormulaExpr::EqualPos(left, right) => {
-                buf.push_str(left);
-                buf.push_str("=");
-                buf.push_str(right);
-            }
-            FormulaExpr::LessEqualPos(left, right) => {
-                buf.push_str(left);
-                buf.push_str("<=");
-                buf.push_str(right);
-            }
-            FormulaExpr::EqualLabel(var, label) => {
-                buf.push_str(var);
-                buf.push_str("=");
-                buf.push_str(self.label_name(*label));
-            }
-            FormulaExpr::LetterAtPos(var, letter) => {
-                buf.push_str(var);
-                buf.push_str("=");
-                buf.push_str(self.letter_name(*letter));
-            }
+    fn or(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Or(Box::new(self), Box::new(other)),
         }
     }
 
-    pub fn write_to_alt_ergo(&self, buf: &mut String) {
-        self.write_to_alt_ergo_rec(self.root, buf)
-    }
-
-    //
-    //  It is almost the same as print_formula_rec,
-    //  except that
-    //  in alt-ergo, we will quantify as follows
-    //  exists x: int. (x >= 0 and x < len) /\ φ
-    //  forall x: int. (x >= 0 and x < len) -> φ
-    //  forall x: label. φ
-    //  exists x: label. φ
-    //
-    fn write_to_alt_ergo_rec(&self, fid: FormulaId, buf: &mut String) {
-        match &self.exprs[fid as usize] {
-            FormulaExpr::True => buf.push_str("T"),
-            FormulaExpr::False => buf.push_str("F"),
-            FormulaExpr::And(left, right) => {
-                buf.push_str("(");
-                self.write_to_alt_ergo_rec(*left, buf);
-                buf.push_str(" and ");
-                self.write_to_alt_ergo_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Or(left, right) => {
-                buf.push_str("(");
-                self.write_to_alt_ergo_rec(*left, buf);
-                buf.push_str(" or ");
-                self.write_to_alt_ergo_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Implies(left, right) => {
-                buf.push_str("(");
-                self.write_to_alt_ergo_rec(*left, buf);
-                buf.push_str(" -> ");
-                self.write_to_alt_ergo_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Iff(left, right) => {
-                buf.push_str("(");
-                self.write_to_alt_ergo_rec(*left, buf);
-                buf.push_str(" <-> ");
-                self.write_to_alt_ergo_rec(*right, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::Not(inner) => {
-                buf.push_str("not ");
-                self.write_to_alt_ergo_rec(*inner, buf);
-            }
-            FormulaExpr::ExistsLabel(var, inner) => {
-                buf.push_str("(");
-                buf.push_str("exists ");
-                buf.push_str(var);
-                buf.push_str(": label. ");
-                self.write_to_alt_ergo_rec(*inner, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::ForallLabel(var, inner) => {
-                buf.push_str("(");
-                buf.push_str("forall ");
-                buf.push_str(var);
-                buf.push_str(": label. ");
-                self.write_to_alt_ergo_rec(*inner, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::ExistsPos(var, inner) => {
-                buf.push_str("(");
-                buf.push_str("exists ");
-                buf.push_str(var);
-                buf.push_str(": int. (");
-                buf.push_str(var);
-                buf.push_str(" >= 0 and ");
-                buf.push_str(var);
-                buf.push_str(" < len) and \n");
-                self.write_to_alt_ergo_rec(*inner, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::ForallPos(var, inner) => {
-                buf.push_str("(");
-                buf.push_str("forall ");
-                buf.push_str(var);
-                buf.push_str(": int. (");
-                buf.push_str(var);
-                buf.push_str(" >= 0 and ");
-                buf.push_str(var);
-                buf.push_str(" < len) -> \n");
-                self.write_to_alt_ergo_rec(*inner, buf);
-                buf.push_str(")");
-            }
-            FormulaExpr::EqualPos(left, right) => {
-                buf.push_str(left);
-                buf.push_str("=");
-                buf.push_str(right);
-            }
-            FormulaExpr::LessEqualPos(left, right) => {
-                buf.push_str(left);
-                buf.push_str("<=");
-                buf.push_str(right);
-            }
-            FormulaExpr::EqualLabel(var, label) => {
-                buf.push_str(var);
-                buf.push_str(" = D");
-                buf.push_str(self.label_name(*label));
-            }
-            FormulaExpr::LetterAtPos(var, letter) => {
-                buf.push_str(var);
-                buf.push_str(" = L");
-                buf.push_str(self.letter_name(*letter));
-            }
+    fn implies(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Implies(Box::new(self), Box::new(other)),
         }
     }
 
-
-    pub fn write_to_smtlib(&self, buf: &mut String) {
-        self.write_to_smtlib_rec(self.root, buf)
+    fn iff(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Iff(Box::new(self), Box::new(other)),
+        }
     }
 
-    //
-    // ExistsPos x. φ ->
-    // (exists ((x Int)) (and (>= x 0) (< x len) (phi))
-    //
-    // ForallPos x. φ ->
-    // (forall ((x Int)) (=> (and (>= x 0) (< x len)) (phi))
-    //
-    // ExistsLabel x. φ ->
-    // (exists ((x Label)) (phi))
-    //
-    // ForallLabel x. φ ->
-    // (forall ((x Label)) (phi))
-    //
-    //
-    fn write_to_smtlib_rec(&self, fid: FormulaId, buf: &mut String) {
-        match &self.exprs[fid as usize] {
-            FormulaExpr::True => buf.push_str("true"),
-            FormulaExpr::False => buf.push_str("false"),
-            FormulaExpr::And(left, right) => {
-                buf.push_str("(and ");
-                self.write_to_smtlib_rec(*left, buf);
-                buf.push_str(" ");
-                self.write_to_smtlib_rec(*right, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::Or(left, right) => {
-                buf.push_str("(or ");
-                self.write_to_smtlib_rec(*left, buf);
-                buf.push_str(" ");
-                self.write_to_smtlib_rec(*right, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::Implies(left, right) => {
-                buf.push_str("(=> ");
-                self.write_to_smtlib_rec(*left, buf);
-                buf.push_str(" ");
-                self.write_to_smtlib_rec(*right, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::Iff(left, right) => {
-                buf.push_str("(= ");
-                self.write_to_smtlib_rec(*left, buf);
-                buf.push_str(" ");
-                self.write_to_smtlib_rec(*right, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::Not(inner) => {
-                buf.push_str("(not ");
-                self.write_to_smtlib_rec(*inner, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::ExistsLabel(var, inner) => {
-                buf.push_str("(exists (");
-                buf.push_str("(");
-                buf.push_str(var);
-                buf.push_str(" Label)) ");
-                self.write_to_smtlib_rec(*inner, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::ForallLabel(var, inner) => {
-                buf.push_str("(forall (");
-                buf.push_str("(");
-                buf.push_str(var);
-                buf.push_str(" Label)) ");
-                self.write_to_smtlib_rec(*inner, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::ExistsPos(var, inner) => {
-                buf.push_str("(exists (");
-                buf.push_str("(");
-                buf.push_str(var);
-                buf.push_str(" Int)) ");
-                buf.push_str("(and (>= ");
-                buf.push_str(var);
-                buf.push_str(" 0) (< ");
-                buf.push_str(var);
-                buf.push_str(" len)) ");
-                self.write_to_smtlib_rec(*inner, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::ForallPos(var, inner) => {
-                buf.push_str("(forall (");
-                buf.push_str("(");
-                buf.push_str(var);
-                buf.push_str(" Int)) ");
-                buf.push_str("(=> (and (>= ");
-                buf.push_str(var);
-                buf.push_str(" 0) (< ");
-                buf.push_str(var);
-                buf.push_str(" len)) ");
-                self.write_to_smtlib_rec(*inner, buf);
-                buf.push_str(")");
-            },
-            FormulaExpr::EqualPos(left, right) => {
-                buf.push_str("(= ");
-                buf.push_str(left);
-                buf.push_str(" ");
-                buf.push_str(right);
-                buf.push_str(")");
-            },
-            FormulaExpr::LessEqualPos(left, right) => {
-                buf.push_str("(<= ");
-                buf.push_str(left);
-                buf.push_str(" ");
-                buf.push_str(right);
-                buf.push_str(")");
-            },
-            FormulaExpr::EqualLabel(var, label) => {
-                buf.push_str("(= ");
-                buf.push_str(var);
-                buf.push_str(" D");
-                buf.push_str(self.label_name(*label));
-                buf.push_str(")");
-            },
-            FormulaExpr::LetterAtPos(var, letter) => {
-                buf.push_str("(= (select word ");
-                buf.push_str(var);
-                buf.push_str(") L");
-                buf.push_str(self.letter_name(*letter));
-                buf.push_str(")");
-            },
+    fn not(self) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Not(Box::new(self)),
+        }
+    }
+
+    fn exists(self, var: VarName, sort: Sort) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Exists(var, sort, Box::new(self)),
+        }
+    }
+
+    fn forall(self, var: VarName, sort: Sort) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Forall(var, sort, Box::new(self)),
+        }
+    }
+
+    fn equal(sort: Sort, left: VarName, right: VarName) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::Equal(sort, left, right),
+        }
+    }
+
+    fn less_equal(left: VarName, right: VarName) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::LessEqual(left, right),
+        }
+    }
+
+    fn letter_at_pos(var: VarName, letter: A) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::LetterAtPos(var, letter),
+        }
+    }
+
+    fn equal_constant(var: VarName, value: S) -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::EqualConstant(var, value),
+        }
+    }
+
+    fn const_true() -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::True,
+        }
+    }
+
+    fn const_false() -> FormulaR<A, S> {
+        FormulaR {
+            inside: FormulaF::False,
         }
     }
 }
 
-impl Display for Formula {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Alphabet: {}\nLabels: {}\n", self.alphabet, self.labels)?;
-        let mut buf = String::new();
-        self.print_formula(&mut buf);
-        write!(f, "{}", buf)
-    }
-}
-
-// TODO: print to alt-ergo
-//
-// (* create the various labels *)
-// type label    = D0 | ... | Dn (number of labels)
-// (* create the various letters *)
-// type letter   = E | La | Lb | ... (number of letters)
-//
-// (* encode a finite word *)
-// logic len  : int
-// logic word : int -> letter
-//
-// (* predicates for every letter in the word *)
-// predicate a(i:int) = word(i) = a
-// predicate b(i:int) = word(i) = b
-// ...
-//
-// (* the word has size len *)
-// axiom word_is_finite: forall i:int.
-//     (i <= len -> word(i) <> E) and
-//     (i > len  -> word(i) = E)  and
-//     (i < 0    -> word(i) = E)
-//
-// (* The final goal *)
-// goal alt_ergo_goal: { the formula here }
-//
-
-pub fn write_to_alt_ergo(formula: &Formula) -> String {
+/// The alt-ergo printer. We first create a preamble of the following form:
+///
+/// (* create the various labels *)
+/// type label    = D0 | ... | Dn (number of labels)
+/// (* create the various letters *)
+/// type letter   = E | La | Lb | ... (number of letters)
+///
+/// (* encode a finite word *)
+/// logic len  : int
+/// logic word : int -> letter
+///
+/// (* predicates for every letter in the word *)
+/// predicate a(i:int) = word(i) = a
+/// predicate b(i:int) = word(i) = b
+/// ...
+///
+/// (* the word has size len *)
+/// axiom word_is_finite: forall i:int.
+///     (i <= len -> word(i) <> E) and
+///     (i > len  -> word(i) = E)  and
+///     (i < 0    -> word(i) = E)
+///
+/// (* The final goal *)
+/// goal alt_ergo_goal: { the formula here }
+///
+pub fn produce_alt_ergo<A, S>(formula: &FormulaR<A, S>, alphabet: &[A], labels: &[S]) -> String
+where
+    A: ToSmtSolver + Clone,
+    S: ToSmtSolver + Clone,
+{
     let mut buf = String::new();
     buf.push_str("\n(* create the various labels *)\n");
     buf.push_str("type label    =  ");
-    for (i, name) in formula.labels.names.iter().enumerate() {
+    for (i, name) in labels.iter().enumerate() {
         if i > 0 {
             buf.push_str(" | ");
         }
-        buf.push_str("D");
-        buf.push_str(name);
+        buf.push_str(name.to_alt_ergo().as_str());
     }
 
     buf.push_str("\n(* create the various letters *)\n");
     buf.push_str("type letter   = E | ");
-    for (i, name) in formula.alphabet.names.iter().enumerate() {
+    for (i, name) in alphabet.iter().enumerate() {
         if i > 0 {
             buf.push_str(" | ");
         }
         buf.push_str("L");
-        buf.push_str(name);
+        buf.push_str(name.to_alt_ergo().as_str());
     }
     buf.push_str("\n");
     buf.push_str("\n");
@@ -555,11 +484,11 @@ pub fn write_to_alt_ergo(formula: &Formula) -> String {
     buf.push_str("logic word : int -> letter\n");
     buf.push_str("\n");
     buf.push_str("(* predicates for every letter in the word *)\n");
-    for name in formula.alphabet.names.iter() {
-        buf.push_str("predicate ");
-        buf.push_str(name);
+    for name in alphabet.iter() {
+        buf.push_str("predicate is_letter_");
+        buf.push_str(name.to_alt_ergo().as_str());
         buf.push_str("(i:int) = word(i) = L");
-        buf.push_str(name);
+        buf.push_str(name.to_alt_ergo().as_str());
         buf.push_str("\n");
     }
     buf.push_str("\n");
@@ -571,114 +500,340 @@ pub fn write_to_alt_ergo(formula: &Formula) -> String {
     buf.push_str("\n");
     buf.push_str("(* The final goal *)\n");
     buf.push_str("goal alt_ergo_goal: ");
-    formula.write_to_alt_ergo(&mut buf);
+    buf.push_str(formula.to_alt_ergo().as_str());
     buf.push_str("\n");
     buf
 }
 
-
-// Write to SMTLIB
-//
-// ```smtlib
-// ; Set the logic to be first-order logic with linear arithmetics
-// ; and arrays
-// (set-logic QF_AUFLIA)
-// ; Declare the alphabet 
-// (declare-datatype Letter (letter_a letter_b letter_c))
-// ; Declare the labels (for the print statements)
-// (declare-datatype Label  (label_a label_b label_c))
-// (declare-const len Int)
-// (declare-const word (Array  Int Letter))
-// ; assert that the word is of length len >= 0
-// (assert (= len (array-length word)))
-// (assert (>= len 0))
-// ; assert that some property holds for the word
-// ; for instance
-// ; exists l : label. forall x : Int. 0 <= x <= len -> (l = label_a -> word[x] = letter_a)
-// (assert (exists ((l Label)) (forall ((x Int)) (=> (and (<= 0 x) (<= x len)) (=> (= l label_a) (= (select word x) letter_a)))))
-// ```
-fn write_to_smtlib(formula: &Formula) -> String {
+/// The SMT-LIB printer. We first create a preamble of the following form:
+///
+/// ; Set the logic to be first-order logic with linear arithmetics
+/// ; and arrays
+/// (set-logic ALL)
+/// ; Declare the alphabet
+/// (declare-datatype Letter (letter_a letter_b letter_c blank))
+/// ; Declare the labels (for the print statements)
+/// (declare-datatype Label  (label_a label_b label_c))
+/// (declare-const len Int)
+/// (declare-const word (Array Int Letter))
+/// (assert (>= len 0))
+/// ; assert that the word is of length len >= 0
+/// ; note that there is no "array-length" function in SMT-LIB
+/// ; so we have to assert that the length is equal to len
+/// (assert (forall ((x Int)) (= (select word x) (ite (<= x len) (select word x) blank))))
+///
+/// (assert (>= len 0))
+pub fn produce_smtlib<A, S>(formula: &FormulaR<A, S>, alphabet: &[A], labels: &[S]) -> String
+where
+    A: ToSmtSolver + Clone,
+    S: ToSmtSolver + Clone,
+{
     let mut buf = String::new();
     buf.push_str("; Set the logic to be first-order logic with linear arithmetics\n");
     buf.push_str("; and arrays\n");
-    buf.push_str("(set-logic QF_AUFLIA)\n");
+    buf.push_str("(set-logic ALL)\n");
     buf.push_str("; Declare the alphabet \n");
-    buf.push_str("(declare-datatype Letter (");
-    for (i, name) in formula.alphabet.names.iter().enumerate() {
+    buf.push_str("(declare-datatype Letter ((blank) ");
+    for (i, name) in alphabet.iter().enumerate() {
         if i > 0 {
             buf.push_str(" ");
         }
-        buf.push_str("L");
-        buf.push_str(name);
+        buf.push_str("(");
+        buf.push_str(name.to_smtlib().as_str());
+        buf.push_str(")");
     }
     buf.push_str("))\n");
     buf.push_str("; Declare the labels (for the print statements)\n");
     buf.push_str("(declare-datatype Label  (");
-    for (i, name) in formula.labels.names.iter().enumerate() {
+    for (i, name) in labels.iter().enumerate() {
         if i > 0 {
             buf.push_str(" ");
         }
-        buf.push_str("D");
-        buf.push_str(name);
+        buf.push_str("(");
+        buf.push_str(name.to_smtlib().as_str());
+        buf.push_str(")");
     }
     buf.push_str("))\n");
     buf.push_str("(declare-const len Int)\n");
-    buf.push_str("(declare-const word (Array  Int Letter))\n");
+    buf.push_str("(declare-fun word (Int) Letter)\n");
     buf.push_str("; assert that the word is of length len >= 0\n");
-    buf.push_str("(assert (= len (array-length word)))\n");
     buf.push_str("(assert (>= len 0))\n");
-    buf.push_str("; assert that some property holds for the word\n");
-    buf.push_str("; for instance\n");
-    formula.write_to_smtlib(&mut buf);
+    buf.push_str("; assert that the word contains only letters between 0 and len\n");
+    buf.push_str(
+        "(assert (forall ((x Int)) (= (word x) (ite (or (< x 0) (>= x len)) (word x) blank))))\n",
+    );
+    buf.push_str(
+        "(assert (forall ((x Int)) (=> (and (<= 0 x) (< x len)) (not (= (word x) blank)))))\n",
+    );
+
+    buf.push_str("; now the formula\n");
+    buf.push_str("(assert (not ");
+    buf.push_str(formula.to_smtlib().as_str());
+    buf.push_str("))\n");
+
+    buf.push_str("; check for satisfiability\n");
+    buf.push_str("(check-sat)\n");
+
     buf
 }
 
+/// The MONA printer. We first create a preamble of the following form:
+///
+/// var2 A,B,C;
+/// var2 D0,D1,D2;
+/// var2 W,L;
+///
+/// D0 = {1};
+/// D1 = {2};
+/// D2 = {3};
+/// L = D0 union D1 union D2;
+/// W = A union B union C;
+///
+/// restrict (L inter W = empty);
+/// restrict (all1 x: (x in L) | (x in W));
+///
+/// formula;
+pub fn produce_mona<A, S>(formula: &FormulaR<A, S>, alphabet: &[A], labels: &[S]) -> String
+where
+    A: ToSmtSolver + Clone,
+    S: ToSmtSolver + Clone,
+{
+    let mut buf = String::new();
+    buf.push_str("m2l-str;\n");
+    // Create the alphabet variables
+    buf.push_str("var2 ");
+    for (i, name) in alphabet.iter().enumerate() {
+        if i > 0 {
+            buf.push_str(", ");
+        }
+        buf.push_str("L");
+        buf.push_str(name.to_mona().as_str());
+    }
+    buf.push_str(";\n");
+    // create the label variables
+    buf.push_str("var2 ");
+    for (i, name) in labels.iter().enumerate() {
+        if i > 0 {
+            buf.push_str(", ");
+        }
+        buf.push_str(name.to_mona().as_str());
+    }
+    buf.push_str(";\n");
 
-// Write to MONA
-// -> do the same thing.
-//
-pub fn test_altergo() {
-    // test the two sorted formula module
-    let alphabet = Alphabet::default(); // {a,b}
-    println!("Alphabet: {}", alphabet);
-    let labels = Labels::default();
-    println!("Labels: {}", labels);
-    let mut formula = Formula::new(alphabet, labels);
-    let a = formula.add_expr(FormulaExpr::EqualLabel("x".into(), 0));
-    let b = formula.add_expr(FormulaExpr::EqualLabel("y".into(), 1));
-    let c = formula.add_expr(FormulaExpr::And(a, b));
-    let d = formula.add_expr(FormulaExpr::ExistsPos("x".into(), c));
-    let e = formula.add_expr(FormulaExpr::ExistsPos("y".into(), d));
-    formula.root = e;
-    eprintln!("Formula: {}", formula);
-    eprintln!("Formula: {}\n\n", write_to_alt_ergo(&formula));
-    eprintln!("Formula: {}", write_to_smtlib(&formula));
+    // Create the word and label sets
+    buf.push_str("var2 W,L;\n");
+
+    // Assert that the labels D{i} = {i}
+    for (i, name) in labels.iter().enumerate() {
+        buf.push_str("assert (");
+        buf.push_str(name.to_mona().as_str());
+        buf.push_str(" = {");
+        buf.push_str((i).to_string().as_str());
+        buf.push_str("});\n");
+    }
+
+    // Assert that D = the unions of the Dname
+    buf.push_str("assert (L = ");
+    for (i, name) in labels.iter().enumerate() {
+        if i > 0 {
+            buf.push_str(" union ");
+        }
+        buf.push_str(name.to_mona().as_str());
+    }
+    buf.push_str(");\n");
+
+    // Assert that W = the unions of the Lname
+    buf.push_str("assert (W = ");
+    for (i, name) in alphabet.iter().enumerate() {
+        if i > 0 {
+            buf.push_str(" union ");
+        }
+        buf.push_str("L");
+        buf.push_str(name.to_mona().as_str());
+    }
+    buf.push_str(");\n");
+
+    // Assert that L inter W = empty
+    buf.push_str("assert (L inter W = empty);\n");
+    // Assert that all x are either in L or in W
+    // buf.push_str("assert (all1 x: (x in L) | (x in W));\n");
+
+    // The formula
+    buf.push_str(formula.to_mona().as_str());
+    buf.push_str(";\n");
+
+    buf
 }
 
-pub fn test_formula() {
-    let mut alphabet = Alphabet::new();
-    alphabet.add_letter("a".to_string());
-    alphabet.add_letter("b".to_string());
+pub fn test_output() -> (
+    FormulaR<DefaultAlphabet, DefaultLabel>,
+    Vec<DefaultAlphabet>,
+    Vec<DefaultLabel>,
+) {
+    // The first formula is
+    // the word is not empty and for every a there is a b afterwards
+    let non_empty = FormulaR::equal(Sort::Position, "i".to_string(), "i".to_string())
+        .exists("i".to_string(), Sort::Position);
 
-    let mut labels = Labels::new();
-    labels.add_label("l1".to_string(), 3);
-    labels.add_label("l2".to_string(), 2);
-    labels.add_label("l3".to_string(), 1);
+    let no_last_a = FormulaR::less_equal("i".to_string(), "j".to_string())
+        .and(FormulaR::letter_at_pos("j".to_string(), DefaultAlphabet::B))
+        .exists("j".to_string(), Sort::Position)
+        .forall("i".to_string(), Sort::Position);
 
-    let mut formula = Formula::new(alphabet, labels);
+    let last_b = FormulaR::less_equal("j".to_string(), "i".to_string())
+        .forall("j".to_string(), Sort::Position)
+        .and(FormulaR::letter_at_pos("i".to_string(), DefaultAlphabet::B))
+        .exists("i".to_string(), Sort::Position);
 
-    let l1 = formula.add_expr(FormulaExpr::EqualLabel("x".to_string(), 0));
-    let l2 = formula.add_expr(FormulaExpr::EqualLabel("y".to_string(), 1));
-    let l3 = formula.add_expr(FormulaExpr::EqualLabel("z".to_string(), 2));
+    let formula = non_empty.and(no_last_a).iff(last_b);
 
-    let l4 = formula.add_expr(FormulaExpr::And(l1, l2));
-    let l5 = formula.add_expr(FormulaExpr::And(l4, l3));
+    let alphabet = vec![DefaultAlphabet::A, DefaultAlphabet::B, DefaultAlphabet::C];
+    let labels = vec![
+        DefaultLabel {
+            position: vec![0, 0, 1],
+        },
+        DefaultLabel {
+            position: vec![0, 1, 0],
+        },
+    ];
 
-    formula.root = l5;
+    (formula, alphabet, labels)
+}
 
-    let mut buf = String::new();
-    formula.print_formula(&mut buf);
+#[derive(Debug)]
+pub enum SMTSolver {
+    AltErgo,
+    CVC5,
+    Mona,
+    Z3,
+}
 
-    let alt_ergo = write_to_alt_ergo(&formula);
-    println!("{}", alt_ergo);
+#[derive(Debug, Clone)]
+pub enum SMTResult {
+    Valid,
+    Unknown,
+    Invalid,
+}
+
+impl SMTSolver {
+    pub fn produce_output<A, S>(
+        &self,
+        formula: &FormulaR<A, S>,
+        alphabet: &[A],
+        labels: &[S],
+    ) -> String
+    where
+        A: ToSmtSolver + Clone,
+        S: ToSmtSolver + Clone,
+    {
+        match self {
+            SMTSolver::AltErgo => produce_alt_ergo(formula, alphabet, labels),
+            SMTSolver::CVC5 => produce_smtlib(formula, alphabet, labels),
+            SMTSolver::Mona => produce_mona(formula, alphabet, labels),
+            SMTSolver::Z3 => produce_smtlib(formula, alphabet, labels),
+        }
+    }
+
+    pub fn extension(&self) -> &str {
+        match self {
+            SMTSolver::AltErgo => "ae",
+            SMTSolver::CVC5 => "smt2",
+            SMTSolver::Mona => "mona",
+            SMTSolver::Z3 => "smt2",
+        }
+    }
+
+    pub fn command(&self) -> &str {
+        match self {
+            SMTSolver::AltErgo => "alt-ergo",
+            SMTSolver::CVC5 => "cvc5",
+            SMTSolver::Mona => "mona",
+            SMTSolver::Z3 => "z3",
+        }
+    }
+
+    pub fn parse_output(&self, output: &str) -> SMTResult {
+        eprintln!("Output: {}", output);
+        match self {
+            SMTSolver::AltErgo => {
+                if output.contains("Valid") {
+                    SMTResult::Valid
+                } else if output.contains("Unknown") {
+                    SMTResult::Unknown
+                } else {
+                    SMTResult::Invalid
+                }
+            }
+            SMTSolver::CVC5 => {
+                if output.contains("unsat") {
+                    SMTResult::Valid
+                } else if output.contains("unknown") {
+                    SMTResult::Unknown
+                } else {
+                    SMTResult::Invalid
+                }
+            }
+            SMTSolver::Mona => {
+                if output.contains("Formula is valid") {
+                    SMTResult::Valid
+                } else if output.contains("Formula is unsatisfiable") {
+                    SMTResult::Invalid
+                } else {
+                    SMTResult::Unknown
+                }
+            }
+            SMTSolver::Z3 => {
+                if output.contains("unsat") {
+                    SMTResult::Valid
+                } else if output.contains("unknown") {
+                    SMTResult::Unknown
+                } else {
+                    SMTResult::Invalid
+                }
+            }
+        }
+    }
+
+    pub fn solve<A, S>(&self, formula: &FormulaR<A, S>, alphabet: &[A], labels: &[S]) -> SMTResult
+    where
+        A: ToSmtSolver + Clone,
+        S: ToSmtSolver + Clone,
+    {
+        // create a temporary file and produce the formula
+        let tmp_dir = tempdir().unwrap();
+        let file_path = tmp_dir
+            .path()
+            .join("formula_output")
+            .with_extension(self.extension());
+        let mut file = File::create(&file_path).unwrap();
+
+        // get the path of the file
+        let output = self.produce_output(formula, alphabet, labels);
+        file.write_all(output.as_bytes()).unwrap();
+
+        // call the correct solver
+        eprintln!("Path: {:?}", &file_path);
+
+        let output = std::process::Command::new(self.command())
+            .arg(file_path)
+            .output()
+            .expect(format!("failed to execute process {}", self.command()).as_str());
+
+        let utf8output = String::from_utf8(output.stdout).unwrap();
+
+        self.parse_output(&utf8output)
+    }
+}
+
+pub fn example() {
+    let (f, alph, lbls) = test_output();
+    let cvc5 = SMTSolver::CVC5.solve(&f, &alph, &lbls);
+    let alt_ergo = SMTSolver::AltErgo.solve(&f, &alph, &lbls);
+    let z3 = SMTSolver::Z3.solve(&f, &alph, &lbls);
+    let mona = SMTSolver::Mona.solve(&f, &alph, &lbls);
+
+    println!("CVC5: {:?}", cvc5);
+    println!("AltErgo: {:?}", alt_ergo);
+    println!("Z3: {:?}", z3);
+    println!("Mona: {:?}", mona);
 }

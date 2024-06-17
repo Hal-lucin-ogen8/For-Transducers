@@ -15,7 +15,7 @@ pkgs.buildEnv {
     pkgs.pkg-config
     pkgs.m4
     # alt-ergo prover
-    pkgs.alt-ergo
+    # pkgs.alt-ergo
     # cvc5 prover
     pkgs.cvc5
     # z3 prover
