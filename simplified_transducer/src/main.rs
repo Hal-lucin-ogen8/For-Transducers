@@ -3,7 +3,9 @@ use std::env;
 use std::fs;
 //use simplified_transducer::parser::print_ast; // Import the print_ast function
 mod label;
+mod order;
 use label::traverse_and_label;
+use order::generate_order_formula;
 
 fn main() {
     // Collect command-line arguments
@@ -26,11 +28,11 @@ fn main() {
     let mut parser = Parser::new(tokens);
     let stmts = parser.parse();
 
-    // Print the AST
     let mut path = Vec::new();
     let mut labels = Vec::new();
     let mut universe_formulas = Vec::new();
     let mut for_vars = Vec::new();
+    let mut for0_or_for1 = Vec::new();
     let mut label_formulas = Vec::new();
 
     // Traverse the AST and label print statements and generate universe formulas and label formulas
@@ -41,8 +43,29 @@ fn main() {
         None,
         &mut universe_formulas,
         &mut for_vars,
+        &mut for0_or_for1,
         &mut label_formulas,
     );
+
+    // //print paths
+    // for path in labels.iter() {
+    //     println!("pathh{:?}", path);
+    // }
+
+    // //print for_vars
+    // for for_var in for_vars.iter() {
+    //     println!("forr{:?}", for_var);
+    // }
+    
+    // //print labels
+    // for label in labels.iter() {
+    //     println!("labell{:?}", label);
+    // }
+
+    //print for0_or_for1
+    // for for0_or_for1 in for0_or_for1.iter() {
+    //     println!("for0_or_for1{:?}", for0_or_for1);
+    // }
 
     // Print the labels, corresponding universe formulas, and label formulas
     for (i, label) in labels.iter().enumerate() {
@@ -67,6 +90,10 @@ fn main() {
         println!("    Label Formula(b)({}): {}", vars_str, label_formula_b);
         println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
     }
+
+    //run order.rs
+    let mut order_formulas = Vec::new();
+    generate_order_formula(&stmts, &mut path, &mut labels, &mut universe_formulas, &mut order_formulas);
     //print_ast(&stmts,0);
     // Interpret the AST
     // let mut interpreter = Interpreter::new(input_string);
