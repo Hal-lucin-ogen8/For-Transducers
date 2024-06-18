@@ -1,5 +1,6 @@
-./for_transducer_interpreter/target/
-./simplified_transducer/target/
+for_transducer_interpreter/target/
+simplified_transducer/target/
+for_tranducer_interpreter/target/
 *.aux
 *.pdf
 *.log
