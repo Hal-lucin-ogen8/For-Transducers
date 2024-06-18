@@ -29,7 +29,6 @@ impl Parser {
     }
 
     // Parse the tokens into a vector of statements
-    // Parse the tokens into a vector of statements
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut stmts = Vec::new();
         while self.current < self.tokens.len() {
@@ -45,10 +44,16 @@ impl Parser {
             Some(Token::Print) => {
                 self.current += 1;
                 self.expect(Token::LeftParen);
-                let expr = self.p_expression();
+                let expressions = self.p_expression();
                 self.expect(Token::RightParen);
-                vec![Stmt::Print(expr)]
+        
+                let mut statements = Vec::new();
+                for expr in expressions {
+                    statements.push(Stmt::Print(expr));
+                }
+                statements
             }
+
             // Parse a for loop
             Some(Token::For) => {
                 self.current += 1;
@@ -132,19 +137,24 @@ impl Parser {
     }
 
     // Parse a print expression
-    fn p_expression(&mut self) -> Pexpr {
+    fn p_expression(&mut self) -> Vec<Pexpr> {
+        let mut expressions = Vec::new();
+        
         match self.peek().cloned() {
             Some(Token::String(s)) => {
                 self.current += 1;
-                Pexpr::Str(s)
+                for c in s.chars() {
+                    expressions.push(Pexpr::Str(c.to_string()));
+                }
             }
-
             Some(Token::Label(name)) => {
                 self.current += 1;
-                Pexpr::Label(name)
+                expressions.push(Pexpr::Label(name));
             }
-            _ => panic!("Expected string, variable, or label"),
+            _ => panic!("Expected string or label"),
         }
+
+        expressions
     }
 
     // Parse a boolean expression
