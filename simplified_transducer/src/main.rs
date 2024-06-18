@@ -1,7 +1,8 @@
 use simplified_transducer::{tokenize, Parser};
 use std::env;
 use std::fs;
-//use simplified_transducer::parser::print_ast; // Import the print_ast function
+// use std::vec;
+// use simplified_transducer::parser::print_ast; // Import the print_ast function
 mod label;
 mod order;
 use label::traverse_and_label;
@@ -47,26 +48,6 @@ fn main() {
         &mut label_formulas,
     );
 
-    // //print paths
-    // for path in labels.iter() {
-    //     println!("pathh{:?}", path);
-    // }
-
-    // //print for_vars
-    // for for_var in for_vars.iter() {
-    //     println!("forr{:?}", for_var);
-    // }
-    
-    // //print labels
-    // for label in labels.iter() {
-    //     println!("labell{:?}", label);
-    // }
-
-    //print for0_or_for1
-    // for for0_or_for1 in for0_or_for1.iter() {
-    //     println!("for0_or_for1{:?}", for0_or_for1);
-    // }
-
     // Print the labels, corresponding universe formulas, and label formulas
     for (i, label) in labels.iter().enumerate() {
         let (vars, universe_formula) = &universe_formulas[i];
@@ -91,10 +72,37 @@ fn main() {
         println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
     }
 
-    //run order.rs
+
+    let for_vars: Vec<Vec<i32>> = universe_formulas.iter()
+        .map(|(vars, _)| vars.iter().map(|var| var[1..].parse::<i32>().unwrap()).collect())
+        .collect();
+
+
+    //calculate the order formulas
     let mut order_formulas = Vec::new();
-    generate_order_formula(&stmts, &mut path, &mut labels, &mut universe_formulas, &mut order_formulas);
-    //print_ast(&stmts,0);
+    generate_order_formula(&mut universe_formulas, &for0_or_for1, &mut order_formulas);
+
+    println!("\nOrder Formulas:");
+    // Print the order formulas
+    for (i, j, formula) in order_formulas.iter() {
+        let mut vec = Vec::new();
+
+        for a in 0..for_vars[*i].len() {
+            vec.push(format!("X{}", for_vars[*i][a]));
+        }
+
+        for a in 0..for_vars[*j].len() {
+            vec.push(format!("x{}", for_vars[*j][a]));
+        }
+
+        //separate the variables by commas
+        let vars_str = vec.join(", ");
+
+        println!("print{} < print{} ({}): {}",i ,j, vars_str, formula);
+
+    }
+
+    // print_ast(&stmts,0);
     // Interpret the AST
     // let mut interpreter = Interpreter::new(input_string);
     // interpreter.interpret(stmts);
