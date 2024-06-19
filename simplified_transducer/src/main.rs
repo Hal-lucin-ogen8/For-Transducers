@@ -11,7 +11,7 @@ use order::generate_order_formula;
 fn main() {
     // Collect command-line arguments
     let args: Vec<String> = env::args().collect();
-    if args.len() <= 2 {
+    if args.len() != 2 {
         println!("Usage: {} <script> <string>", args[0]);
         return;
     }
@@ -98,7 +98,9 @@ fn main() {
         //separate the variables by commas
         let vars_str = vec.join(", ");
 
-        println!("print{} < print{} ({}): {}",i ,j, vars_str, formula);
+        let label_i = &labels[*i];
+        let label_j = &labels[*j];
+        println!("print{:?} <= print{:?} ({}): {}", label_i, label_j, vars_str, formula);
 
     }
 

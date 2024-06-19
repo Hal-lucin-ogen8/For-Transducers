@@ -12,7 +12,7 @@ pub fn generate_order_formula(
 
     // Logic for generating order formulas
     for i in 0..universe_formulas.len() {
-        for j in i + 1..universe_formulas.len() {
+        for j in 0..universe_formulas.len() {
             
             //store the largest common prefix array for each of the arrays for_vars[i] and for_vars[j]
             let mut lcp = Vec::new();
@@ -26,7 +26,11 @@ pub fn generate_order_formula(
             }
 
             // Generate the order formula by iterating backwards through the LCP array
-            let mut order_formula = Bexpr::Var("T".to_string()); // Initial condition
+            let mut order_formula = if i <= j {
+                Bexpr::Var("T".to_string())
+            } else {
+                Bexpr::Var("F".to_string())
+            };
 
             for k in (0..lcp.len()).rev() {
                 let lhs = Bexpr::Var(format!("X{}", lcp[k])).clone(); // Cloning to avoid move
@@ -41,11 +45,19 @@ pub fn generate_order_formula(
                 let combined_condition = if k == lcp.len() - 1 {
                     // Last element of LCP: combine with just the less condition
                     if for0_or_for1[k] == 0 {
-                        less_equal
+                        if i<= j{
+                            less_equal
+                        } else{
+                            less
+                        }
                     }
 
                     else {
-                        greater_equal
+                        if i<= j{
+                            greater_equal
+                        } else {
+                            greater
+                        }
                     }
                     
                 } else {
