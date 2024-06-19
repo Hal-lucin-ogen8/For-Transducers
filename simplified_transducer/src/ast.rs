@@ -1,12 +1,11 @@
 use std::fmt;
 
 pub enum Stmt {
-    Print(Pexpr), // 
+    Print(Pexpr),            //
     For0(String, Vec<Stmt>), //first to last
     For1(String, Vec<Stmt>), //last to first
-    If(Bexpr, Vec<Stmt>), // If statement with condition, then branch
+    If(Bexpr, Vec<Stmt>),    // If statement with condition, then branch
 }
-
 
 pub enum Pexpr {
     Label(String),
@@ -22,7 +21,7 @@ pub enum Bexpr {
     Equal(Box<Bexpr>, Box<Bexpr>),     // Equal to comparison
     NotEqual(Box<Bexpr>, Box<Bexpr>),  // Not equal to comparison
     GreaterEqual(Box<Bexpr>, Box<Bexpr>), // Greater than or equal to comparison
-    Greater(Box<Bexpr>, Box<Bexpr>),      // Greater than comparison
+    Greater(Box<Bexpr>, Box<Bexpr>),   // Greater than comparison
     Not(Box<Bexpr>),
     Label(String),
     And(Box<Bexpr>, Box<Bexpr>),
@@ -48,17 +47,9 @@ impl fmt::Display for Bexpr {
     }
 }
 
-pub struct Interpreter<'a> {
-    pub universe: fn(&'a str) -> Bexpr,
-    pub order: fn(&'a str, &'a str) -> Bexpr,
-    pub letter: fn(&'a str, &'a str, &'a str) -> Bexpr,
-}
-
 pub enum Fexpr {
     Number(i32),
     Str(String),
     Var(String),
     Label(String),
 }
-
-
