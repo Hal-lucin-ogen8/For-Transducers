@@ -11,3 +11,8 @@ pub struct QfInterpretation {
     pub order: Vec<(usize, usize, Bexpr)>,
     pub letters: Vec<(usize, String, Bexpr)>,
 }
+
+/// TODO: implement this
+pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
+    unimplemented!()
+}
