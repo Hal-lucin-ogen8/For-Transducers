@@ -1,10 +1,10 @@
 use simplified_transducer::{tokenize, Parser};
+use simplified_transducer::ast::Bexpr;
 use std::env;
 use std::fs;
-// use std::vec;
-// use simplified_transducer::parser::print_ast; // Import the print_ast function
 mod label;
 mod order;
+mod bexpr_evaluator;
 mod qf_interpretation;
 use label::traverse_and_label;
 use order::generate_order_formula;
@@ -111,9 +111,9 @@ fn main() {
     // Print the interpretation
     qf_interpretation::print_interpretation(&qf, &for_vars);
 
+    //give iterator to the interpreter
+    qf_interpretation::evaluate(&qf, "abcd".to_string());
 
-    // print_ast(&stmts,0);
-    // Interpret the AST
-    // let mut interpreter = Interpreter::new(input_string);
-    // interpreter.interpret(stmts);
+    
+
 }

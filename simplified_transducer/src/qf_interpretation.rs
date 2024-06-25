@@ -1,10 +1,10 @@
-use std::vec;
-
+use std::vec::Vec;
 ///
 /// In this file we define what is a quantifier
 /// free interpretation of words.
 ///
 use simplified_transducer::ast::Bexpr;
+use simplified_transducer::bexpr_evaluator;
 
 //define new struct QfInterpretation
 impl QfInterpretation {
@@ -188,6 +188,48 @@ pub fn fit_interpretation(universe_formulas: Vec<(Vec<String>, Bexpr)> , order_f
 
 /// TODO: implement this
 pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
-    unimplemented!()
+    
+    let n = w.len();
+
+    //define a vector that will store tuples of strings
+    let mut iterators = Vec::<(String, String)>::new();
+
+    for i in 0..qf.labels.len() {
+        let arity = qf.arities[i];
+        let label = &qf.labels[i];
+
+        // Generate tuples for current label and arity
+        let mut tuple_strings = Vec::<(String, String)>::new();
+
+        // Generate all combinations of positions for this arity
+        let max_value = n.pow(arity as u32);
+        for num in 0..max_value {
+            let tuple = label.clone(); // Start with the label
+
+            let mut positions = String::new();
+            let mut temp = num;
+            for j in 0..arity {
+                if j > 0 {
+                    positions.push('x'); // Add 'x' between the positions
+                }
+
+                let pos = temp % n;
+                temp /= n;
+                positions.push_str(&format!("{}", pos));
+            }
+
+            tuple_strings.push((tuple.clone(), positions.clone().chars().rev().collect::<String>()));
+        }
+
+        // Add generated tuples for current label and arity to iterators
+        iterators.extend(tuple_strings);
+    }
+
+    // Print the iterators
+    // println!("{:?}", iterators);
+
+    "hello".to_string()
 }
+
+
 
