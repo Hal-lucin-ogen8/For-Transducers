@@ -5,6 +5,7 @@ use std::fs;
 // use simplified_transducer::parser::print_ast; // Import the print_ast function
 mod label;
 mod order;
+mod qf_interpretation;
 use label::traverse_and_label;
 use order::generate_order_formula;
 
@@ -103,6 +104,13 @@ fn main() {
         println!("print{:?} <= print{:?} ({}): {}", label_i, label_j, vars_str, formula);
 
     }
+
+    // Fit the interpretation
+    let qf = qf_interpretation::fit_interpretation(universe_formulas, order_formulas, for_vars.clone(), labels.clone(), label_formulas);
+    
+    // Print the interpretation
+    qf_interpretation::print_interpretation(&qf, &for_vars);
+
 
     // print_ast(&stmts,0);
     // Interpret the AST

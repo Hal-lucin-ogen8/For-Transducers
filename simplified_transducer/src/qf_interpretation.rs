@@ -1,8 +1,59 @@
+use std::vec;
+
 ///
 /// In this file we define what is a quantifier
 /// free interpretation of words.
 ///
-use crate::ast::Bexpr;
+use simplified_transducer::ast::Bexpr;
+
+//define new struct QfInterpretation
+impl QfInterpretation {
+    // Associated function to create a new instance of QfInterpretation
+    pub fn new() -> Self {
+        Self {
+            labels: Vec::new(),
+            arities: Vec::new(),
+            universe: Vec::new(),
+            order: Vec::new(),
+            letters: Vec::new(),
+        }
+    }
+}
+
+pub fn print_interpretation(qf: &QfInterpretation, for_vars: &Vec<Vec<i32>>) {
+    //print the labels
+    println!("Labels: {:?}", qf.labels);
+
+    //print the arities
+    println!("Arities: {:?}", qf.arities);
+
+    // print the universe formulas
+    println!("\nUniverse Formulas:");
+    for (i, formula) in qf.universe.iter() {
+        println!("{:?}, Formula: {}", i, formula);
+    }
+
+    // print the order formulas
+    println!("\nOrder Formulas:");
+    for (i, j, formula) in qf.order.iter() {
+        let mut vec = Vec::new();
+
+        for a in 0..for_vars[*i].len() {
+            vec.push(format!("X{}", for_vars[*i][a]));
+        }
+
+        for a in 0..for_vars[*j].len() {
+            vec.push(format!("x{}", for_vars[*j][a]));
+        }
+
+        println!("{i} <= {j}: {formula}")
+    }
+    
+    //print the letter formulas
+    for (i, str, expr) in qf.letters.iter() {
+        println!("Letter: {:?}, Formula({}): {}", i, str, expr);
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct QfInterpretation {
@@ -83,7 +134,60 @@ fn create_default_interpretation() -> QfInterpretation {
     }
 }
 
+pub fn fit_interpretation(universe_formulas: Vec<(Vec<String>, Bexpr)> , order_formulas: Vec<(usize, usize, Bexpr)>, for_vars: Vec<Vec<i32>>, labels: Vec<Vec<usize>>, label_formulas: Vec<(String, String, String)>)-> QfInterpretation {
+    //define the new interpretation
+    let mut qf = QfInterpretation::new();
+
+    //define the arities
+    qf.arities = for_vars.iter().map(|vars| vars.len()).collect();
+
+    for label in labels.iter() {
+        // Convert each usize to String and join them with ", "
+        let joined: String = label.iter()
+            .map(|num| num.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        
+        // Format the final string
+        let formatted_label = format!("[{}]", joined);
+        
+        // Push the formatted label
+        qf.labels.push(formatted_label);
+    }
+
+    //define the universe formulas
+    qf.universe = vec![];
+    let mut i = 0;
+    for (_vars, formula) in universe_formulas {
+        //push bexpr of the universe formulas
+        qf.universe.push((i, formula));
+        i+=1;
+    }
+
+    //define the order formulas
+    qf.order = vec![];
+    for (i, j, formula) in order_formulas {
+        qf.order.push((i, j, formula));
+    }
+
+    //define the letter formulas
+    qf.letters = vec![];
+    i = 0;
+
+    for (label_formula_a, label_formula_b, label_formula_hash) in label_formulas {
+        //push bexpr of the label formulas
+        qf.letters.push((i, "a".to_string(), Bexpr::Str(label_formula_a)));
+        qf.letters.push((i, "b".to_string(), Bexpr::Str(label_formula_b)));
+        qf.letters.push((i, "#".to_string(), Bexpr::Str(label_formula_hash)));
+        i+=1;
+    }
+
+    qf
+    
+}
+
 /// TODO: implement this
 pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
     unimplemented!()
 }
+
