@@ -62,7 +62,7 @@ fn evaluate_formula(
             pos.vars
                 .iter()
                 .enumerate()
-                .map(|(i, v)| (format!("{variable_name}{i}"), *v))
+                .map(|(i, v)| (format!("{variable_name}{}", i+1), *v))
                 .collect::<Vec<(String, InputPosition)>>()
         })
         .flatten()
@@ -369,18 +369,32 @@ pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
     // the size of the universe
     let word_size = w.len();
 
+    // Generate the universe of all possible positions
     // the universe (all tuples of positions for all labels)
+    // let universe: Vec<OutputPosition> = qf
+    //     .arities
+    //     .iter()
+    //     .enumerate()
+    //     .map(|(label, arity)| {
+    //         (0..word_size)
+    //             .combinations(*arity)
+    //             .map(|vars| OutputPosition { label, vars })
+    //             .collect::<Vec<OutputPosition>>()
+    //     })
+    //     .flatten()
+    //     .collect();
+
+    // Generate the universe of all possible positions
     let universe: Vec<OutputPosition> = qf
         .arities
         .iter()
         .enumerate()
-        .map(|(label, arity)| {
-            (0..word_size)
-                .combinations(*arity)
-                .map(|vars| OutputPosition { label, vars })
-                .collect::<Vec<OutputPosition>>()
+        .flat_map(|(label, &arity)| {
+            std::iter::repeat(0..word_size)
+                .take(arity)
+                .multi_cartesian_product()
+                .map(move |vars| OutputPosition { label, vars })
         })
-        .flatten()
         .collect();
 
     eprintln!("Universe: {:?}", universe);

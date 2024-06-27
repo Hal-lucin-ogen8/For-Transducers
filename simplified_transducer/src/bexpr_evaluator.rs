@@ -14,19 +14,85 @@ pub struct Evaluator {
 impl Evaluator {
     // TODO: implement this function
     pub fn eval(&mut self, expr: &Bexpr) -> bool {
-        unimplemented!()
+        self.evaluate_condition(expr)
     }
 
     fn evaluate_bexpr(&mut self, expr: &Bexpr) -> Value {
+
+        //print hashmap
+        // println!("{:?}", self.variables);
+
         match expr {
-            Bexpr::Var(name) => match self.variables.get(name) {
-                Some(value) => Value::Number(*value),
-                None => panic!("Variable {} not defined", name),
-            },
-            Bexpr::Str(s) => Value::Str(s.clone()),
+            Bexpr::Var(name) => {
+                if name == "T" {
+                    Value::Number(1)
+                } else if name == "F" {
+                    Value::Number(0)
+                } else {
+                    match self.variables.get(name) {
+                        Some(value) => Value::Number(*value),
+                        None => panic!("Variable {} not defined", name),
+                    }
+                }
+            }
+            Bexpr::Str(s) => {
+                // Check for a(var_name), b(var_name), or #(var_name)
+                if s.starts_with('a') && s.ends_with(')') && s.len() > 2 && s.chars().nth(1) == Some('(') {
+                    let var_name = &s[2..s.len()-1];
+                    match self.variables.get(var_name) {
+                        Some(value) => {
+                            if let Some(character) = self.word.chars().nth(*value) {
+                                if character == 'a' {
+                                    Value::Number(1)
+                                } else {
+                                    Value::Number(0)
+                                }
+                            } else {
+                                panic!("Index out of bounds");
+                            }
+                        }
+                        None => panic!("Variable {} not defined", var_name),
+                    }
+                } else if s.starts_with('b') && s.ends_with(')') && s.len() > 2 && s.chars().nth(1) == Some('(') {
+                    let var_name = &s[2..s.len()-1];
+                    match self.variables.get(var_name) {
+                        Some(value) => {
+                            if let Some(character) = self.word.chars().nth(*value) {
+                                if character == 'b' {
+                                    Value::Number(1)
+                                } else {
+                                    Value::Number(0)
+                                }
+                            } else {
+                                panic!("Index out of bounds");
+                            }
+                        }
+                        None => panic!("Variable {} not defined", var_name),
+                    }
+                } else if s.starts_with('#') && s.ends_with(')') && s.len() > 2 && s.chars().nth(1) == Some('(') {
+                    let var_name = &s[2..s.len()-1];
+                    match self.variables.get(var_name) {
+                        Some(value) => {
+                            if let Some(character) = self.word.chars().nth(*value) {
+                                if character == '#' {
+                                    Value::Number(1)
+                                } else {
+                                    Value::Number(0)
+                                }
+                            } else {
+                                panic!("Index out of bounds");
+                            }
+                        }
+                        None => panic!("Variable {} not defined", var_name),
+                    }
+                } else {
+                    Value::Str(s.clone())
+                }
+            }
+
             Bexpr::Label(name) => match self.variables.get(name) {
                 Some(value) => {
-                    if let Some(character) = self.word.chars().nth(*value as usize) {
+                    if let Some(character) = self.word.chars().nth(*value) {
                         Value::Str(character.to_string())
                     } else {
                         panic!("Index out of bounds");
@@ -42,7 +108,7 @@ impl Evaluator {
             | Bexpr::GreaterEqual(left, right) => {
                 let left_val = self.evaluate_bexpr(left);
                 let right_val = self.evaluate_bexpr(right);
-
+    
                 match (left_val, right_val) {
                     (Value::Number(lv), Value::Number(rv)) => match expr {
                         Bexpr::LessEqual(_, _) => Value::Number((lv <= rv) as usize),
@@ -73,7 +139,7 @@ impl Evaluator {
             Bexpr::And(left, right) => {
                 let left_val = self.evaluate_bexpr(left);
                 let right_val = self.evaluate_bexpr(right);
-
+    
                 match (left_val, right_val) {
                     (Value::Number(lv), Value::Number(rv)) => {
                         Value::Number(((lv != 0) && (rv != 0)) as usize)
@@ -84,7 +150,7 @@ impl Evaluator {
             Bexpr::Or(left, right) => {
                 let left_val = self.evaluate_bexpr(left);
                 let right_val = self.evaluate_bexpr(right);
-
+    
                 match (left_val, right_val) {
                     (Value::Number(lv), Value::Number(rv)) => {
                         Value::Number(((lv != 0) || (rv != 0)) as usize)

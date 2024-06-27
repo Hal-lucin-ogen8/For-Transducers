@@ -143,7 +143,7 @@ fn main() {
     // Print the interpretation
     qf_interpretation::print_interpretation(&qf, &for_vars);
 
-    simplified_transducer::two_sorted_formulas::example();
+    // simplified_transducer::two_sorted_formulas::example();
 
     loop {
         // ask for an input string

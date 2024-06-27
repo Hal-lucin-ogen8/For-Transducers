@@ -1,8 +1,7 @@
 for i in 0..n {
     for j in 0..n {
-        print("b")
-        for k in 0..n {
-            print("a")
+        if i<j {
+            print(i.label)
         }
     }
 }
