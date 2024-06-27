@@ -116,16 +116,19 @@ impl QfInterpretation {
             .letters
             .iter()
             .filter_map(|(l, letter, phi)| {
-                // First check that the label of the formula is correct
                 if *l == position.label {
                     let variables = vec![("x".to_string(), position)];
-                    // evaluate the formula, if it is true, return the letter
-                    evaluate_formula(phi, word.clone(), &variables).then_some(letter.clone());
+                    if evaluate_formula(phi, word.clone(), &variables) {
+                        Some(letter.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
-                None
             })
             .collect::<Vec<Letter>>();
-
+    
         match possible_letters.len() {
             0 => Err(QfInterpretationError::NoLetter {
                 word,

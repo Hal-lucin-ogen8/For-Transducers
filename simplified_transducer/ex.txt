@@ -1,6 +1,6 @@
 for i in 0..n {
     for j in 0..n {
-        if j<i {
+        if j<=i {
             print(i.label)
         }
     }
