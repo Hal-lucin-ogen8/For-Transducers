@@ -57,7 +57,7 @@ fn main() {
     for (i, (label_formula_a, label_formula_b, label_formula_hash)) in
         label_formulas.iter().enumerate()
     {
-        let (vars, _) = &remapped_universe_formulas[i];
+        let (vars, _) = &universe_formulas[i];
         let (remapped_a, remapped_b, remapped_hash) = (
             remap_formula_string(label_formula_a, vars),
             remap_formula_string(label_formula_b, vars),
@@ -113,11 +113,11 @@ fn main() {
         let mut vec = Vec::new();
 
         for a in 0..for_vars[*i].len() {
-            vec.push(format!("X{}", for_vars[*i][a]));
+            vec.push(format!("x{}", for_vars[*i][a]));
         }
 
         for a in 0..for_vars[*j].len() {
-            vec.push(format!("x{}", for_vars[*j][a]));
+            vec.push(format!("y{}", for_vars[*j][a]));
         }
 
         // Separate the variables by commas
@@ -133,15 +133,15 @@ fn main() {
 
     // Fit the interpretation
     let qf = qf_interpretation::fit_interpretation(
-        universe_formulas,
+        remapped_universe_formulas,
         order_formulas,
         for_vars.clone(),
         labels.clone(),
-        label_formulas,
+        remapped_label_formulas,
     );
 
     // Print the interpretation
-    qf_interpretation::print_interpretation(&qf, &for_vars);
+    //qf_interpretation::print_interpretation(&qf, &for_vars);
 
     // simplified_transducer::two_sorted_formulas::example();
 
@@ -216,9 +216,11 @@ fn remap_formula_string(formula: &str, vars: &[String]) -> String {
     for (new_index, var) in vars.iter().enumerate() {
         index_map.insert(var.clone(), format!("x{}", new_index + 1));
     }
+    //println!("{:?}",index_map);
     let mut remapped_formula = formula.to_string();
     for (old_var, new_var) in &index_map {
         remapped_formula = remapped_formula.replace(old_var, new_var);
     }
+    //println!("{:?}",remapped_formula);
     remapped_formula
 }

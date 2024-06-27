@@ -33,8 +33,8 @@ pub fn generate_order_formula(
             };
 
             for k in (0..lcp.len()).rev() {
-                let lhs = Bexpr::Var(format!("X{}", lcp[k])).clone(); // Cloning to avoid move
-                let rhs = Bexpr::Var(format!("x{}", lcp[k])).clone(); // Cloning to avoid move
+                let lhs = Bexpr::Var(format!("x{}", lcp[k])).clone(); // Cloning to avoid move
+                let rhs = Bexpr::Var(format!("y{}", lcp[k])).clone(); // Cloning to avoid move
 
                 let less = Bexpr::Less(Box::new(lhs.clone()), Box::new(rhs.clone()));
                 let greater = Bexpr::Greater(Box::new(lhs.clone()), Box::new(rhs.clone()));

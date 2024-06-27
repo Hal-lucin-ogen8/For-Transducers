@@ -21,7 +21,7 @@ impl Evaluator {
 
         //print hashmap
         // println!("{:?}", self.variables);
-
+        //println!("{:?}", expr);
         match expr {
             Bexpr::Var(name) => {
                 if name == "T" {
