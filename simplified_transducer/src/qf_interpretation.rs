@@ -397,14 +397,14 @@ pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
         })
         .collect();
 
-    //eprintln!("Universe: {:?}", universe);
+    eprintln!("Universe: {:?}", universe);
 
     // filter the universe based on the universe formulas
     let universe: Vec<OutputPosition> = universe
         .into_iter()
         .filter(|pos| qf.get_universe(w.clone(), &pos).unwrap())
         .collect();
-    //eprintln!("Universe [filtered]: {:?}", universe);
+    eprintln!("Universe [filtered]: {:?}", universe);
 
     // sort the universe based on the order formulas
     // update so that we detect equal positions
@@ -416,7 +416,7 @@ pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
             false => std::cmp::Ordering::Greater,
         })
         .collect();
-    //eprintln!("Universe [sorted]: {:?}", universe);
+    eprintln!("Universe [sorted]: {:?}", universe);
 
     // evaluate the letter formulas and replace the positions
     // by the result of the evaluation
@@ -424,7 +424,7 @@ pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
         .iter()
         .map(|pos| qf.get_letter(w.clone(), pos).unwrap())
         .collect();
-    //eprintln!("Universe [replaced]: {:?}", universe);
+    eprintln!("Universe [replaced]: {:?}", universe);
 
     result
 }
