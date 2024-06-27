@@ -12,8 +12,9 @@ pub struct Evaluator {
 }
 
 impl Evaluator {
+    // TODO: implement this function
     pub fn eval(&mut self, expr: &Bexpr) -> bool {
-        self.evaluate_condition(expr)
+        unimplemented!()
     }
 
     fn evaluate_bexpr(&mut self, expr: &Bexpr) -> Value {

@@ -1,10 +1,10 @@
-use simplified_transducer::{tokenize, Parser};
 use simplified_transducer::ast::Bexpr;
+use simplified_transducer::{tokenize, Parser};
 use std::env;
 use std::fs;
+mod bexpr_evaluator;
 mod label;
 mod order;
-mod bexpr_evaluator;
 mod qf_interpretation;
 use label::traverse_and_label;
 use order::generate_order_formula;
@@ -54,7 +54,9 @@ fn main() {
     }
 
     let mut remapped_label_formulas = vec![];
-    for (i, (label_formula_a, label_formula_b, label_formula_hash)) in label_formulas.iter().enumerate() {
+    for (i, (label_formula_a, label_formula_b, label_formula_hash)) in
+        label_formulas.iter().enumerate()
+    {
         let (vars, _) = &remapped_universe_formulas[i];
         let (remapped_a, remapped_b, remapped_hash) = (
             remap_formula_string(label_formula_a, vars),
@@ -88,13 +90,22 @@ fn main() {
         println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
     }
 
-    let for_vars: Vec<Vec<i32>> = remapped_universe_formulas.iter()
-        .map(|(vars, _)| vars.iter().map(|var| var[1..].parse::<i32>().unwrap()).collect())
+    let for_vars: Vec<Vec<i32>> = remapped_universe_formulas
+        .iter()
+        .map(|(vars, _)| {
+            vars.iter()
+                .map(|var| var[1..].parse::<i32>().unwrap())
+                .collect()
+        })
         .collect();
 
     // Calculate the order formulas
     let mut order_formulas = Vec::new();
-    generate_order_formula(&mut remapped_universe_formulas, &for0_or_for1, &mut order_formulas);
+    generate_order_formula(
+        &mut remapped_universe_formulas,
+        &for0_or_for1,
+        &mut order_formulas,
+    );
 
     println!("\nOrder Formulas:");
     // Print the order formulas
@@ -114,18 +125,38 @@ fn main() {
 
         let label_i = &labels[*i];
         let label_j = &labels[*j];
-        println!("print{:?} <= print{:?} ({}): {}", label_i, label_j, vars_str, formula);
-
+        println!(
+            "print{:?} <= print{:?} ({}): {}",
+            label_i, label_j, vars_str, formula
+        );
     }
 
     // Fit the interpretation
-    let qf = qf_interpretation::fit_interpretation(universe_formulas, order_formulas, for_vars.clone(), labels.clone(), label_formulas);
-    
+    let qf = qf_interpretation::fit_interpretation(
+        universe_formulas,
+        order_formulas,
+        for_vars.clone(),
+        labels.clone(),
+        label_formulas,
+    );
+
     // Print the interpretation
     qf_interpretation::print_interpretation(&qf, &for_vars);
 
-    //give iterator to the interpreter
-    qf_interpretation::evaluate(&qf, "abcd".to_string());
+    simplified_transducer::two_sorted_formulas::example();
+
+    loop {
+        // ask for an input string
+        let mut input = String::new();
+        println!("Enter a string to evaluate the formula: ");
+        std::io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+        //give iterator to the interpreter
+        let qf_output = qf_interpretation::evaluate(&qf, input.to_string());
+        println!("QF output: {}", qf_output);
+        //let original_output: String = unimplemented!(); // TODO (for later) directly evaluate the transducer
+        //println!("TR output: {}", original_output);
+    }
 }
 
 fn remap_variables(vars: &[String], formula: &Bexpr) -> (Vec<String>, Bexpr) {

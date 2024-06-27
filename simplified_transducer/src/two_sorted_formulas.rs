@@ -1,5 +1,3 @@
-use crate::formula::{Formula as MonoFormula, Interpretation as MonoInterpretation};
-
 use std::fs::File;
 /// This module contains the implementation of the
 /// `TwoSortedFormulas` logic, with one sort
@@ -316,7 +314,7 @@ where
 
 #[derive(Debug)]
 pub struct FormulaR<A, S> {
-    inside: FormulaF<Box<FormulaR<A, S>>, A, S>,
+    pub inside: FormulaF<Box<FormulaR<A, S>>, A, S>,
 }
 
 pub fn fold_formula<A, S, T, F>(formula: &FormulaR<A, S>, f: &F) -> T
@@ -827,13 +825,13 @@ impl SMTSolver {
 
 pub fn example() {
     let (f, alph, lbls) = test_output();
-    let cvc5 = SMTSolver::CVC5.solve(&f, &alph, &lbls);
+    // let cvc5 = SMTSolver::CVC5.solve(&f, &alph, &lbls);
     let alt_ergo = SMTSolver::AltErgo.solve(&f, &alph, &lbls);
-    let z3 = SMTSolver::Z3.solve(&f, &alph, &lbls);
+    // let z3 = SMTSolver::Z3.solve(&f, &alph, &lbls);
     let mona = SMTSolver::Mona.solve(&f, &alph, &lbls);
 
-    println!("CVC5: {:?}", cvc5);
+    // println!("CVC5: {:?}", cvc5);
     println!("AltErgo: {:?}", alt_ergo);
-    println!("Z3: {:?}", z3);
+    // println!("Z3: {:?}", z3);
     println!("Mona: {:?}", mona);
 }

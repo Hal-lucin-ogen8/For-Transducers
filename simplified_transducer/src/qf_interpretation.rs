@@ -1,9 +1,9 @@
+use crate::bexpr_evaluator;
 ///
 /// In this file we define what is a quantifier
 /// free interpretation of words.
 ///
-use simplified_transducer::ast::Bexpr;
-use simplified_transducer::bexpr_evaluator;
+use crate::Bexpr;
 use std::collections::HashMap;
 
 use itertools::Itertools;
@@ -16,11 +16,12 @@ pub type Label = usize;
 pub type Arity = usize;
 /// Type alias to represent output letters
 pub type Letter = String;
+
 /// Type alias to represent a position in the output word
 #[derive(Debug, Clone)]
 pub struct OutputPosition {
     label: Label,
-    vars: Vec<usize>,
+    vars: Vec<InputPosition>,
 }
 
 /// A quantifier free interpretation of words
@@ -72,7 +73,7 @@ fn evaluate_formula(
         variables: variables_environment,
     };
 
-    evaluator.eval(formula)
+    evaluator.eval(formula) // unimplemented!
 }
 
 #[derive(Debug)]
@@ -367,7 +368,6 @@ pub fn fit_interpretation(
 pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
     // the size of the universe
     let word_size = w.len();
-    eprintln!("Word size: {}", word_size);
 
     // the universe (all tuples of positions for all labels)
     let universe: Vec<OutputPosition> = qf
@@ -377,10 +377,7 @@ pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
         .map(|(label, arity)| {
             (0..word_size)
                 .combinations(*arity)
-                .map(|vars| OutputPosition {
-                    label: label.clone(),
-                    vars,
-                })
+                .map(|vars| OutputPosition { label, vars })
                 .collect::<Vec<OutputPosition>>()
         })
         .flatten()
@@ -396,6 +393,8 @@ pub fn evaluate(qf: &QfInterpretation, w: String) -> String {
     eprintln!("Universe [filtered]: {:?}", universe);
 
     // sort the universe based on the order formulas
+    // update so that we detect equal positions
+    // FIXME: if equal then say equal
     let universe: Vec<OutputPosition> = universe
         .into_iter()
         .sorted_by(|a, b| match qf.get_order(w.clone(), &a, &b).unwrap() {
