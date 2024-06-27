@@ -13,15 +13,12 @@ fn main() {
     // Collect command-line arguments
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <script> <string>", args[0]);
+        println!("Usage: {} <script>", args[0]);
         return;
     }
 
     // Read the script file
     let script = fs::read_to_string(&args[1]).expect("Unable to read script file");
-
-    // Get the string
-    //let _input_string = &args[2];
 
     // Tokenize the script
     let tokens = tokenize(&script);
@@ -49,9 +46,27 @@ fn main() {
         &mut label_formulas,
     );
 
+    // Remap variable indices and update formulas
+    let mut remapped_universe_formulas = vec![];
+    for (vars, universe_formula) in &universe_formulas {
+        let (remapped_vars, remapped_formula) = remap_variables(vars, universe_formula);
+        remapped_universe_formulas.push((remapped_vars, remapped_formula));
+    }
+
+    let mut remapped_label_formulas = vec![];
+    for (i, (label_formula_a, label_formula_b, label_formula_hash)) in label_formulas.iter().enumerate() {
+        let (vars, _) = &remapped_universe_formulas[i];
+        let (remapped_a, remapped_b, remapped_hash) = (
+            remap_formula_string(label_formula_a, vars),
+            remap_formula_string(label_formula_b, vars),
+            remap_formula_string(label_formula_hash, vars),
+        );
+        remapped_label_formulas.push((remapped_a, remapped_b, remapped_hash));
+    }
+
     // Print the labels, corresponding universe formulas, and label formulas
     for (i, label) in labels.iter().enumerate() {
-        let (vars, universe_formula) = &universe_formulas[i];
+        let (vars, universe_formula) = &remapped_universe_formulas[i];
         let vars_str = if vars.is_empty() {
             "".to_string()
         } else {
@@ -63,7 +78,7 @@ fn main() {
             universe_formula.to_string()
         };
 
-        let (label_formula_a, label_formula_b, label_formula_hash) = &label_formulas[i];
+        let (label_formula_a, label_formula_b, label_formula_hash) = &remapped_label_formulas[i];
         println!(
             "Label: {:?}, Universe Formula({}): {}",
             label, vars_str, formula_str
@@ -73,15 +88,13 @@ fn main() {
         println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
     }
 
-
-    let for_vars: Vec<Vec<i32>> = universe_formulas.iter()
+    let for_vars: Vec<Vec<i32>> = remapped_universe_formulas.iter()
         .map(|(vars, _)| vars.iter().map(|var| var[1..].parse::<i32>().unwrap()).collect())
         .collect();
 
-
-    //calculate the order formulas
+    // Calculate the order formulas
     let mut order_formulas = Vec::new();
-    generate_order_formula(&mut universe_formulas, &for0_or_for1, &mut order_formulas);
+    generate_order_formula(&mut remapped_universe_formulas, &for0_or_for1, &mut order_formulas);
 
     println!("\nOrder Formulas:");
     // Print the order formulas
@@ -96,7 +109,7 @@ fn main() {
             vec.push(format!("x{}", for_vars[*j][a]));
         }
 
-        //separate the variables by commas
+        // Separate the variables by commas
         let vars_str = vec.join(", ");
 
         let label_i = &labels[*i];
@@ -113,7 +126,68 @@ fn main() {
 
     //give iterator to the interpreter
     qf_interpretation::evaluate(&qf, "abcd".to_string());
+}
 
-    
+fn remap_variables(vars: &[String], formula: &Bexpr) -> (Vec<String>, Bexpr) {
+    let mut index_map = std::collections::HashMap::new();
+    let mut new_vars = vec![];
+    for (new_index, var) in vars.iter().enumerate() {
+        index_map.insert(var.clone(), format!("x{}", new_index + 1));
+        new_vars.push(format!("x{}", new_index + 1));
+    }
+    let remapped_formula = remap_bexpr_with_map(formula, &index_map);
+    (new_vars, remapped_formula)
+}
 
+fn remap_bexpr_with_map(expr: &Bexpr, map: &std::collections::HashMap<String, String>) -> Bexpr {
+    match expr {
+        Bexpr::Var(var) => Bexpr::Var(map.get(var).cloned().unwrap_or_else(|| var.clone())),
+        Bexpr::Str(s) => Bexpr::Str(s.clone()),
+        Bexpr::Less(lhs, rhs) => Bexpr::Less(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::LessEqual(lhs, rhs) => Bexpr::LessEqual(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::Equal(lhs, rhs) => Bexpr::Equal(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::NotEqual(lhs, rhs) => Bexpr::NotEqual(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::GreaterEqual(lhs, rhs) => Bexpr::GreaterEqual(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::Greater(lhs, rhs) => Bexpr::Greater(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::Not(expr) => Bexpr::Not(Box::new(remap_bexpr_with_map(expr, map))),
+        Bexpr::And(lhs, rhs) => Bexpr::And(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::Or(lhs, rhs) => Bexpr::Or(
+            Box::new(remap_bexpr_with_map(lhs, map)),
+            Box::new(remap_bexpr_with_map(rhs, map)),
+        ),
+        Bexpr::Label(label) => Bexpr::Label(label.clone()),
+    }
+}
+
+fn remap_formula_string(formula: &str, vars: &[String]) -> String {
+    let mut index_map = std::collections::HashMap::new();
+    for (new_index, var) in vars.iter().enumerate() {
+        index_map.insert(var.clone(), format!("x{}", new_index + 1));
+    }
+    let mut remapped_formula = formula.to_string();
+    for (old_var, new_var) in &index_map {
+        remapped_formula = remapped_formula.replace(old_var, new_var);
+    }
+    remapped_formula
 }
