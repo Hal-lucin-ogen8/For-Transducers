@@ -15,6 +15,80 @@ use crate::two_sorted_formulas::{FormulaF, FormulaR};
 pub fn substitute_variables(formula: &Bexpr, name_x: &str, name_y: &str) -> Bexpr {
     unimplemented!()
 }
+/// TODO: implement
+pub fn universe_formula(qf: &QfInterpretation, var_name: &str) -> FormulaS {
+    // 1. find the correct formula (qf.letter.find (...))
+    // 2. substitute the variables in the formula with x -> var
+    // 3. return the formula
+    unimplemented!()
+}
+
+/// TODO: implement
+pub fn order_formula(
+    qf: &QfInterpretation,
+    lx: usize,
+    ly: usize,
+    var_x: &str,
+    var_y: &str,
+) -> FormulaS {
+    // 1. find the correct formula (qf.letter.find (...)) based on the labels
+    // 2. substitute the variables in the formula with x -> var_x, y -> var_y
+    // 3. return the formula
+    unimplemented!()
+}
+
+/// TODO: implement
+pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) -> FormulaS {
+    // 1. find the correct formula (qf.letter.find (...))
+    // 2. substitute the variables in the formula with x -> var
+    // 3. return the formula
+    unimplemented!()
+}
+
+//
+// Huge disjunction
+//
+// \/[ l1 in L] φ(l)
+//
+//
+pub fn disjunction(vec: Vec<FormulaS>) -> FormulaS {
+    // disjunction
+    if vec.len() == 0 {
+        return FormulaS {
+            inside: FormulaF::False,
+        };
+    } else {
+        let mut v_iter = vec.into_iter();
+        let mut f = v_iter.next().unwrap();
+        for i in v_iter {
+            f = f.or(i);
+        }
+        f
+    }
+}
+
+// TODO: check the range of the for loop ! [Number, ...., 1]
+pub fn quantify_exists(var: &str, number: usize, formula: FormulaS) -> FormulaS {
+    let mut f = formula;
+    for i in number..0 {
+        f = f.exists(
+            format!("{}{}", var, i),
+            crate::two_sorted_formulas::Sort::Position,
+        );
+    }
+    f
+}
+
+pub fn quantify_forall(var: &str, number: usize, formula: FormulaS) -> FormulaS {
+    let mut f = formula;
+    for i in number..0 {
+        f = f.forall(
+            format!("{}{}", var, i),
+            crate::two_sorted_formulas::Sort::Position,
+        );
+    }
+    f
+}
 
 type Letter = String;
 type Variable = String;
@@ -93,29 +167,11 @@ where
 
 type FormulaS = FormulaR<String, String>;
 
-pub fn universe_formula(qf: &QfInterpretation, var_name: &str) -> FormulaS {
-    unimplemented!()
-}
-
-pub fn order_formula(
-    qf: &QfInterpretation,
-    l1: usize,
-    l2: usize,
-    var1: &str,
-    var2: &str,
-) -> FormulaS {
-    unimplemented!()
-}
-
-pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) -> FormulaS {
-    unimplemented!()
-}
-
-/// TODO: implement
 pub fn pullback(post_condition: &FoFormula, qf: &QfInterpretation) -> FormulaS {
     fold_fo_formula(post_condition, &|inner| pullback_unrec(inner, qf))
 }
 
+/// TODO implement
 fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -> FormulaS {
     match post_condition {
         FoFormulaR::And(left, right) => FormulaR {
@@ -151,11 +207,11 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // TODO.
             // forall x. φ
             //
-            // forallLalbe lx.
-            // forall x1.
-            // forall x2.
+            // forall_label lx.
+            // forall_position x1.
+            // forall_position x2.
             // ...
-            // forall xn. (n = max arity)
+            // forall_position xn. (n = max arity)
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // ->
             // φ
@@ -179,11 +235,19 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             //
             // a(z)
             //
-            // lz (variable)
+            //
+            // lz          (variable for labels)
+            // z1, ..., zn (variables for positions)
+            //
             // a  (letter)
             //
-            // \/[l1]
-            // ((l1 = lz) /\ letter_formula(z, l, a, qf))
+            // L = { print1, print2, print3 }
+            //
+            // (lz = print1 /\ letter_formula(qf, print1, a, z))
+            // \/
+            // (lz = print2 /\ letter_formula(qf, print2, a, z))
+            // \/
+            // (lz = print3 /\ letter_formula(qf, print3, a, z))
             //
             unimplemented!()
         }

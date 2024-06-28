@@ -347,43 +347,43 @@ where
 }
 
 impl<A, S> FormulaR<A, S> {
-    fn and(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+    pub fn and(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::And(Box::new(self), Box::new(other)),
         }
     }
 
-    fn or(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+    pub fn or(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Or(Box::new(self), Box::new(other)),
         }
     }
 
-    fn implies(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+    pub fn implies(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Implies(Box::new(self), Box::new(other)),
         }
     }
 
-    fn iff(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
+    pub fn iff(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Iff(Box::new(self), Box::new(other)),
         }
     }
 
-    fn not(self) -> FormulaR<A, S> {
+    pub fn not(self) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Not(Box::new(self)),
         }
     }
 
-    fn exists(self, var: VarName, sort: Sort) -> FormulaR<A, S> {
+    pub fn exists(self, var: VarName, sort: Sort) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Exists(var, sort, Box::new(self)),
         }
     }
 
-    fn forall(self, var: VarName, sort: Sort) -> FormulaR<A, S> {
+    pub fn forall(self, var: VarName, sort: Sort) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Forall(var, sort, Box::new(self)),
         }
