@@ -19,7 +19,7 @@ impl Evaluator {
 
     fn evaluate_bexpr(&mut self, expr: &Bexpr) -> Value {
 
-        println!("{:?}", expr);
+        //println!("{:?}", expr);
         match expr {
             Bexpr::Var(name) => {
                 if name == "T" {

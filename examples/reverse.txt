@@ -1,3 +1,0 @@
-for i in n..0 {
-    print(i.label)
-}

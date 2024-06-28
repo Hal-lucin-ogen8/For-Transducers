@@ -153,7 +153,7 @@ fn main() {
         let input = input.trim();
         //give iterator to the interpreter
         let qf_output = qf_interpretation::evaluate(&qf, input.to_string());
-        // println!("QF output: {}", qf_output);
+        println!("QF output: {}", qf_output);
         //let original_output: String = unimplemented!(); // TODO (for later) directly evaluate the transducer
         //println!("TR output: {}", original_output);
     }
