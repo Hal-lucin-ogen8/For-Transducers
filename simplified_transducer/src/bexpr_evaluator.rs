@@ -35,7 +35,14 @@ impl Evaluator {
             }
             Bexpr::Str(s) => {
                 // Check for a(var_name), b(var_name), or #(var_name)
-                if s.starts_with('a') && s.ends_with(')') && s.len() > 2 && s.chars().nth(1) == Some('(') {
+
+                if s == "T" {
+                    Value::Number(1)
+                } else if s == "F" {
+                    Value::Number(0)
+                }
+
+                else if s.starts_with('a') && s.ends_with(')') && s.len() > 2 && s.chars().nth(1) == Some('(') {
                     let var_name = &s[2..s.len()-1];
                     match self.variables.get(var_name) {
                         Some(value) => {

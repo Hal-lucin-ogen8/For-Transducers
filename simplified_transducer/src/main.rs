@@ -81,13 +81,13 @@ fn main() {
         };
 
         let (label_formula_a, label_formula_b, label_formula_hash) = &remapped_label_formulas[i];
-        println!(
-            "Label: {:?}, Universe Formula({}): {}",
-            label, vars_str, formula_str
-        );
-        println!("    Label Formula(a)({}): {}", vars_str, label_formula_a);
-        println!("    Label Formula(b)({}): {}", vars_str, label_formula_b);
-        println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
+        // println!(
+        //     "Label: {:?}, Universe Formula({}): {}",
+        //     label, vars_str, formula_str
+        // );
+        // println!("    Label Formula(a)({}): {}", vars_str, label_formula_a);
+        // println!("    Label Formula(b)({}): {}", vars_str, label_formula_b);
+        // println!("    Label Formula(#)({}): {}", vars_str, label_formula_hash);
     }
 
     let for_vars: Vec<Vec<i32>> = remapped_universe_formulas
@@ -107,7 +107,7 @@ fn main() {
         &mut order_formulas,
     );
 
-    println!("\nOrder Formulas:");
+    // println!("\nOrder Formulas:");
     // Print the order formulas
     for (i, j, formula) in order_formulas.iter() {
         let mut vec = Vec::new();
@@ -125,10 +125,10 @@ fn main() {
 
         let label_i = &labels[*i];
         let label_j = &labels[*j];
-        println!(
-            "print{:?} <= print{:?} ({}): {}",
-            label_i, label_j, vars_str, formula
-        );
+        // println!(
+        //     "print{:?} <= print{:?} ({}): {}",
+        //     label_i, label_j, vars_str, formula
+        // );
     }
 
     // Fit the interpretation
@@ -153,7 +153,7 @@ fn main() {
         let input = input.trim();
         //give iterator to the interpreter
         let qf_output = qf_interpretation::evaluate(&qf, input.to_string());
-        println!("QF output: {}", qf_output);
+        // println!("QF output: {}", qf_output);
         //let original_output: String = unimplemented!(); // TODO (for later) directly evaluate the transducer
         //println!("TR output: {}", original_output);
     }
