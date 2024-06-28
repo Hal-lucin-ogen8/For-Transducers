@@ -207,7 +207,7 @@ fn remap_bexpr_with_map(expr: &Bexpr, map: &std::collections::HashMap<String, St
             Box::new(remap_bexpr_with_map(lhs, map)),
             Box::new(remap_bexpr_with_map(rhs, map)),
         ),
-        Bexpr::Label(label) => Bexpr::Label(label.clone()),
+        Bexpr::Label(label) => Bexpr::Label(map.get(label).cloned().unwrap_or_else(|| label.clone())),
     }
 }
 
