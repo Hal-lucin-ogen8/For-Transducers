@@ -1,5 +1,6 @@
 use simplified_transducer::ast::Bexpr;
 use simplified_transducer::{tokenize, Parser};
+use simplified_transducer::interpreter::Interpreter;
 use std::env;
 use std::fs;
 mod bexpr_evaluator;
@@ -67,20 +68,20 @@ fn main() {
     }
 
     // Print the labels, corresponding universe formulas, and label formulas
-    for (i, label) in labels.iter().enumerate() {
+    for (i, _label) in labels.iter().enumerate() {
         let (vars, universe_formula) = &remapped_universe_formulas[i];
-        let vars_str = if vars.is_empty() {
+        let _vars_str = if vars.is_empty() {
             "".to_string()
         } else {
             vars.join(", ")
         };
-        let formula_str = if universe_formula.to_string() == "T" {
+        let _formula_str = if universe_formula.to_string() == "T" {
             "T".to_string()
         } else {
             universe_formula.to_string()
         };
 
-        let (label_formula_a, label_formula_b, label_formula_hash) = &remapped_label_formulas[i];
+        let (_label_formula_a, _label_formula_b, _label_formula_hash) = &remapped_label_formulas[i];
         // println!(
         //     "Label: {:?}, Universe Formula({}): {}",
         //     label, vars_str, formula_str
@@ -109,7 +110,7 @@ fn main() {
 
     // println!("\nOrder Formulas:");
     // Print the order formulas
-    for (i, j, formula) in order_formulas.iter() {
+    for (i, j, _formula) in order_formulas.iter() {
         let mut vec = Vec::new();
 
         for a in 0..for_vars[*i].len() {
@@ -121,10 +122,10 @@ fn main() {
         }
 
         // Separate the variables by commas
-        let vars_str = vec.join(", ");
+        let _vars_str = vec.join(", ");
 
-        let label_i = &labels[*i];
-        let label_j = &labels[*j];
+        let _label_i = &labels[*i];
+        let _label_j = &labels[*j];
         // println!(
         //     "print{:?} <= print{:?} ({}): {}",
         //     label_i, label_j, vars_str, formula
@@ -145,7 +146,6 @@ fn main() {
 
     // simplified_transducer::two_sorted_formulas::example();
 
-    loop {
         // ask for an input string
         let mut input = String::new();
         println!("Enter a string to evaluate the formula: ");
@@ -154,9 +154,12 @@ fn main() {
         //give iterator to the interpreter
         let qf_output = qf_interpretation::evaluate(&qf, input.to_string());
         println!("QF output: {}", qf_output);
+        print!("TR output: ");
+        let mut interpreter = Interpreter::new(input);
+        interpreter.interpret(stmts);
+        println!("");
         //let original_output: String = unimplemented!(); // TODO (for later) directly evaluate the transducer
         //println!("TR output: {}", original_output);
-    }
 }
 
 fn remap_variables(vars: &[String], formula: &Bexpr) -> (Vec<String>, Bexpr) {
