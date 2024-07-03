@@ -108,13 +108,22 @@ pub fn order_formula(
 }
 
 /// TODO: implement
-pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) -> FormulaS {
-    // 1. find the correct formula (qf.letter.find (...))
-    // 2. substitute the variables in the formula with x -> var
-    // 3. return the formula
+// Function to find the letter formula and substitute variables
+pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) -> Option<FormulaS> {
+    // Find the correct formula from the `letters` vector
+    let letter_entry = qf.letters.iter().find(|(label, letter_find, _)| *label == l && letter == letter_find);
+
+    if let Some((_, _, formula)) = letter_entry {
+        // Substitute variables in the formula
+        let substituted_formula = substitute_variables(formula, var, "");
+
+        // Return the modified formula
+        Some(bexpr_to_formula_s(&substituted_formula))
+    } 
     
-    //parse through all letter formulas in qf and check if the labels match
-    unimplemented!();
+    else {
+        None
+    }
 }
 
 //
@@ -273,7 +282,14 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // /\
             // φ
-            unimplemented!()
+            let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
+            let universe_formula = universe_formula(qf, &var);
+
+            let new_inner = FormulaR {
+                inside: FormulaF::And(Box::new(universe_formula), Box::new(inner)),
+            };
+
+            quantify_exists(&var, max_arity, new_inner)
         }
         FoFormulaR::Forall(var, inner) => {
             // TODO.
@@ -287,7 +303,14 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // ->
             // φ
-            unimplemented!()
+            let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
+            let universe_formula = universe_formula(qf, &var);
+
+            let new_inner = FormulaR {
+                inside: FormulaF::Implies(Box::new(universe_formula), Box::new(inner)),
+            };
+
+            quantify_forall(&var, max_arity, new_inner)
         }
         FoFormulaR::PosLessEqual(var1, var2) => {
             // TODO.
@@ -300,7 +323,28 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // \/[l1, l2 labels]
             // ((l1 = lz /\ l2 = lp) /\ order_formula(z, p, l1, l2, qf))
             //
-            unimplemented!()
+            let mut disjunctions = Vec::new();
+            for label1 in &qf.labels {
+                for label2 in &qf.labels {
+                    let order_formula = order_formula(qf, label1.parse().unwrap(), label2.parse().unwrap(), var1.as_str(), var2.as_str());
+                    let conjunction = FormulaR {
+                        inside: FormulaF::And(
+                            Box::new(FormulaR {
+                                inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, var1.clone(), label1.clone()),
+                            }),
+                            Box::new(FormulaR {
+                                inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, var2.clone(), label2.clone()),
+                            }),
+                        ),
+                    };
+                    let conjunction_with_order = FormulaR {
+                        inside: FormulaF::And(Box::new(conjunction), Box::new(order_formula)),
+                    };
+                    disjunctions.push(conjunction_with_order);
+                }
+            }
+
+            disjunction(disjunctions)
         }
         FoFormulaR::PosLetter(var, letter) => {
             // TODO.
@@ -321,7 +365,20 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // \/
             // (lz = print3 /\ letter_formula(qf, print3, a, z))
             //
-            unimplemented!()
+            let mut disjunctions = Vec::new();
+            for (index, label) in qf.labels.iter().enumerate() {
+                if let Some(letter_formula) = letter_formula(qf, index, var.as_str(), letter.as_str()) {
+                    let conjunction = FormulaR {
+                        inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, var.clone(), label.clone()),
+                    };
+                    let conjunction_with_letter = FormulaR {
+                        inside: FormulaF::And(Box::new(conjunction), Box::new(letter_formula)),
+                    };
+                    disjunctions.push(conjunction_with_letter);
+                }
+            }
+
+            disjunction(disjunctions)
         }
     }
 }
