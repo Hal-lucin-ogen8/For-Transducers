@@ -2,19 +2,73 @@ use crate::ast::{Bexpr, Pexpr, Stmt};
 use crate::qf_interpretation::QfInterpretation;
 use crate::two_sorted_formulas::{FormulaF, FormulaR};
 
+pub fn bexpr_to_formula_s(bexpr: &Bexpr) -> FormulaS {
+    // unimplemented!() // Replace this with the actual implementation
+    FormulaS {
+        inside: FormulaF::False,
+    }
+}
+
 //
 //
 // INPUT
-// formula: x1 /\ x2 \/ x3
+// formula: x1 /\ x2 \/ y3
 // name_x : bla
 // name_y : blub
 // OUTPUT
-// bla1 /\ bla2 \/ bla3
+// bla1 /\ bla2 \/ blub3
 //
 /// TODO: implement
+// Function to substitute variables
 pub fn substitute_variables(formula: &Bexpr, name_x: &str, name_y: &str) -> Bexpr {
-    unimplemented!()
+    match formula {
+        Bexpr::Var(var_name) if var_name.starts_with("x") => {
+            let num_part = &var_name[1..]; // Extract numeric part after "x"
+            Bexpr::Var(format!("{}{}", name_x, num_part))
+        },
+        Bexpr::Var(var_name) if var_name.starts_with("y") => {
+            let num_part = &var_name[1..]; // Extract numeric part after "y"
+            Bexpr::Var(format!("{}{}", name_y, num_part))
+        },
+        Bexpr::Var(var_name) => Bexpr::Var(var_name.clone()), // for other variables
+        Bexpr::Str(_) => formula.clone(), // assuming Str does not need substitution
+        Bexpr::LessEqual(left, right) => Bexpr::LessEqual(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::Less(left, right) => Bexpr::Less(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::Equal(left, right) => Bexpr::Equal(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::NotEqual(left, right) => Bexpr::NotEqual(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::GreaterEqual(left, right) => Bexpr::GreaterEqual(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::Greater(left, right) => Bexpr::Greater(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::Not(subexpr) => Bexpr::Not(Box::new(substitute_variables(subexpr, name_x, name_y))),
+        Bexpr::Label(_) => formula.clone(), // assuming Label does not need substitution
+        Bexpr::And(left, right) => Bexpr::And(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+        Bexpr::Or(left, right) => Bexpr::Or(
+            Box::new(substitute_variables(left, name_x, name_y)),
+            Box::new(substitute_variables(right, name_x, name_y)),
+        ),
+    }
 }
+
 /// TODO: implement
 pub fn universe_formula(qf: &QfInterpretation, var_name: &str) -> FormulaS {
     // 1. find the correct formula (qf.letter.find (...))
@@ -34,7 +88,23 @@ pub fn order_formula(
     // 1. find the correct formula (qf.letter.find (...)) based on the labels
     // 2. substitute the variables in the formula with x -> var_x, y -> var_y
     // 3. return the formula
+    
+    //parse through all order formulas in qf and check if the labels match
+    for (label1, label2, formula) in qf.order.iter() {
+        if *label1 == lx && *label2 == ly {
+            //substitute the variables in the formula with x -> var_x, y -> var_y
+            let mut substituted_formula = formula.clone();
+            substituted_formula = substitute_variables(&substituted_formula, var_x, var_y);
+            
+            let mut final_formula = bexpr_to_formula_s(&substituted_formula);
+            
+            return final_formula; 
+            
+        }
+    }
+    
     unimplemented!()
+
 }
 
 /// TODO: implement
@@ -42,7 +112,9 @@ pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) 
     // 1. find the correct formula (qf.letter.find (...))
     // 2. substitute the variables in the formula with x -> var
     // 3. return the formula
-    unimplemented!()
+    
+    //parse through all letter formulas in qf and check if the labels match
+    unimplemented!();
 }
 
 //
