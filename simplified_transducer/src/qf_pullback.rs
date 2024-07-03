@@ -282,14 +282,7 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // /\
             // φ
-            let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
-            let universe_formula = universe_formula(qf, &var);
-
-            let new_inner = FormulaR {
-                inside: FormulaF::And(Box::new(universe_formula), Box::new(inner)),
-            };
-
-            quantify_exists(&var, max_arity, new_inner)
+            unimplemented!("Exists");
         }
         FoFormulaR::Forall(var, inner) => {
             // TODO.
@@ -303,14 +296,7 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // ->
             // φ
-            let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
-            let universe_formula = universe_formula(qf, &var);
-
-            let new_inner = FormulaR {
-                inside: FormulaF::Implies(Box::new(universe_formula), Box::new(inner)),
-            };
-
-            quantify_forall(&var, max_arity, new_inner)
+            unimplemented!("Forall");
         }
         FoFormulaR::PosLessEqual(var1, var2) => {
             // TODO.
