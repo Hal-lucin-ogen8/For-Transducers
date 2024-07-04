@@ -28,6 +28,7 @@ fn main() {
     let mut parser = Parser::new(tokens);
     let stmts = parser.parse();
 
+
     let mut path = Vec::new();
     let mut labels = Vec::new();
     let mut universe_formulas = Vec::new();

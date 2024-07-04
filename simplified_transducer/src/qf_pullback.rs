@@ -1,12 +1,177 @@
-use crate::ast::{Bexpr, Pexpr, Stmt};
+use crate::ast::Bexpr;
 use crate::qf_interpretation::QfInterpretation;
-use crate::two_sorted_formulas::{FormulaF, FormulaR};
+use crate::two_sorted_formulas::{FormulaF, FormulaR, Sort};
 
 pub fn bexpr_to_formula_s(bexpr: &Bexpr) -> FormulaS {
-    // unimplemented!() // Replace this with the actual implementation
-    FormulaS {
-        inside: FormulaF::False,
+    match bexpr {
+        Bexpr::Var(var_name) => {
+            // Handle variable expressions; assume Sort::Position for variables.
+            FormulaS {
+                inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Position, var_name.clone(), var_name.clone()),
+            }
+        },
+
+        Bexpr::Str(s) => {
+            // Handle string expressions; "T" for true and "F" for false.
+            match s.as_str() {
+                "T" => FormulaS {
+                    inside: FormulaF::True,
+                },
+                "F" => FormulaS {
+                    inside: FormulaF::False,
+                },
+                _ => {
+                    // Handle letter at position cases, assuming format is letter(var_name).
+                    if let Some((letter, var_name)) = parse_letter_at_pos(s) {
+                        FormulaS {
+                            inside: FormulaF::LetterAtPos(var_name.to_string(), letter.to_string()),
+                        }
+                    } else {
+                        unimplemented!("Unexpected string value");
+                    }
+                }
+            
+            }
+        },
+
+        Bexpr::LessEqual(lhs, rhs) => {
+            // Handle less than or equal to comparison.
+            FormulaS {
+                inside: FormulaF::LessEqual(
+                    extract_var_name(lhs),
+                    extract_var_name(rhs),
+                ),
+            }
+        },
+
+        Bexpr::Less(lhs, rhs) => {
+            // Handle less than comparison.
+            // Convert to: not (rhs <= lhs)
+            FormulaS {
+                inside: FormulaF::Not(Box::new(FormulaS {
+                    inside: FormulaF::LessEqual(
+                        extract_var_name(rhs),
+                        extract_var_name(lhs),
+                    ),
+                })),
+            }
+        },
+
+        Bexpr::Equal(lhs, rhs) => {
+
+            let rhs_clone = rhs.clone();
+            let lhs_clone = lhs.clone();
+
+            if let Bexpr::Label(var_name) = *lhs_clone {
+                if let Bexpr::Str(letter) = *rhs_clone {
+                    // Handle case where lhs is Label(var_name) and rhs is "a", "b", or "#".
+                    return FormulaS {
+                        inside: FormulaF::LetterAtPos(var_name, letter),
+                    };
+                }
+            }
+            
+            // Handle other equality comparisons
+            FormulaS {
+                inside: FormulaF::Equal(
+                    crate::two_sorted_formulas::Sort::Position,
+                    extract_var_name(lhs),
+                    extract_var_name(rhs),
+                ),
+            }
+        },
+
+        Bexpr::NotEqual(lhs, rhs) => {
+            // Handle not equal comparison.
+            FormulaS {
+                inside: FormulaF::Not(Box::new(FormulaS {
+                    inside: FormulaF::Equal(
+                        crate::two_sorted_formulas::Sort::Position,
+                        extract_var_name(lhs),
+                        extract_var_name(rhs),
+                    ),
+                })),
+            }
+        },
+
+        Bexpr::GreaterEqual(lhs, rhs) => {
+            // Handle greater than or equal to comparison.
+            // Convert to: rhs <= lhs
+            FormulaS {
+                inside: FormulaF::LessEqual(
+                    extract_var_name(rhs),
+                    extract_var_name(lhs),
+                ),
+            }
+        },
+
+        Bexpr::Greater(lhs, rhs) => {
+            // Handle greater than comparison.
+            // Convert to: not (lhs <= rhs)
+            FormulaS {
+                inside: FormulaF::Not(Box::new(FormulaS {
+                    inside: FormulaF::LessEqual(
+                        extract_var_name(lhs),
+                        extract_var_name(rhs),
+                    ),
+                })),
+            }
+        },
+
+        Bexpr::Not(inner) => {
+            // Handle negation.
+            FormulaS {
+                inside: FormulaF::Not(Box::new(bexpr_to_formula_s(inner))),
+            }
+        },
+
+        Bexpr::Label(label) => {
+            // Handle label expressions.
+            unimplemented!("Labels shouldn't be directly part of Bexpr");
+        },
+        
+        Bexpr::And(lhs, rhs) => {
+            // Handle logical AND.
+            FormulaS {
+                inside: FormulaF::And(
+                    Box::new(bexpr_to_formula_s(lhs)),
+                    Box::new(bexpr_to_formula_s(rhs)),
+                ),
+            }
+        },
+
+        Bexpr::Or(lhs, rhs) => {
+            // Handle logical OR.
+            FormulaS {
+                inside: FormulaF::Or(
+                    Box::new(bexpr_to_formula_s(lhs)),
+                    Box::new(bexpr_to_formula_s(rhs)),
+                ),
+            }
+        },
     }
+}
+
+// Helper function to extract variable names from Bexpr.
+fn extract_var_name(bexpr: &Bexpr) -> String {
+    match bexpr {
+        Bexpr::Var(var_name) => var_name.clone(),
+        _ => unimplemented!("Expected a variable"),
+    }
+}
+
+fn parse_letter_at_pos(s: &str) -> Option<(String, String)> {
+    // This function expects the format to be letter(var_name), like a(x), b(y), #(z)
+    if let Some(open_paren_index) = s.find('(') {
+        if let Some(close_paren_index) = s.find(')') {
+            if close_paren_index > open_paren_index {
+                let letter = &s[..open_paren_index];
+                let var_name = &s[open_paren_index + 1..close_paren_index];
+                return Some((letter.to_string(), var_name.to_string()));
+            }
+        }
+    }
+    None
 }
 
 //
@@ -70,11 +235,22 @@ pub fn substitute_variables(formula: &Bexpr, name_x: &str, name_y: &str) -> Bexp
 }
 
 /// TODO: implement
-pub fn universe_formula(qf: &QfInterpretation, var_name: &str) -> FormulaS {
+pub fn universe_formula(qf: &QfInterpretation, label:usize, var_name: &str) -> FormulaS {
     // 1. find the correct formula (qf.letter.find (...))
     // 2. substitute the variables in the formula with x -> var
     // 3. return the formula
-    unimplemented!()
+    for (label_num, expr) in qf.universe.iter(){
+        if *label_num == label {
+            let mut substituted_formula = expr.clone();
+            substituted_formula = substitute_variables(&substituted_formula, var_name, "");
+
+            let final_formula = bexpr_to_formula_s(&substituted_formula);
+
+            return final_formula;
+        }
+    }
+
+    unimplemented!("No matching univ formula found");
 }
 
 /// TODO: implement
@@ -96,14 +272,14 @@ pub fn order_formula(
             let mut substituted_formula = formula.clone();
             substituted_formula = substitute_variables(&substituted_formula, var_x, var_y);
             
-            let mut final_formula = bexpr_to_formula_s(&substituted_formula);
+            let final_formula = bexpr_to_formula_s(&substituted_formula);
             
             return final_formula; 
             
         }
     }
     
-    unimplemented!()
+    unimplemented!("No matching order formula found");
 
 }
 
@@ -157,6 +333,7 @@ pub fn quantify_exists(var: &str, number: usize, formula: FormulaS) -> FormulaS 
             crate::two_sorted_formulas::Sort::Position,
         );
     }
+    f = f.exists(format!("lx"), crate::two_sorted_formulas::Sort::Label);
     f
 }
 
@@ -168,6 +345,8 @@ pub fn quantify_forall(var: &str, number: usize, formula: FormulaS) -> FormulaS 
             crate::two_sorted_formulas::Sort::Position,
         );
     }
+
+    f = f.forall(format!("lx"), crate::two_sorted_formulas::Sort::Label);
     f
 }
 
@@ -282,7 +461,28 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // /\
             // φ
-            unimplemented!("Exists");
+            let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
+
+            let mut universe_formulas = Vec::new();
+            for (i, expr) in qf.universe.iter(){
+                let temp_formula_1 = universe_formula(qf, *i,&format!("{}{}", var, i));
+                let temp_formula_2 = FormulaR {
+                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, "lx".to_string(), format!("l{}",i)),
+                };
+                
+                universe_formulas.push(FormulaR {
+                    inside: FormulaF::And(Box::new(temp_formula_1), Box::new(temp_formula_2)),
+                });
+            }
+
+            let disjunction_univs = disjunction(universe_formulas);
+
+            let conjunction = FormulaF::And(inner, disjunction_univs);
+
+            let final_form = quantify_exists(&var, max_arity, Box::new(conjunction));
+
+            return final_form;
+
         }
         FoFormulaR::Forall(var, inner) => {
             // TODO.
@@ -296,7 +496,27 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // universe_formula(x1, x2, ..., xn, lx, qf)
             // ->
             // φ
-            unimplemented!("Forall");
+            let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
+
+            let mut universe_formulas = Vec::new();
+            for (i, expr) in qf.universe.iter(){
+                let temp_formula_1 = universe_formula(qf, *i,&format!("{}{}", var, i));
+                let temp_formula_2 = FormulaR {
+                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, "lx".to_string(), format!("l{}",i)),
+                };
+                
+                universe_formulas.push(FormulaR {
+                    inside: FormulaF::And(Box::new(temp_formula_1), Box::new(temp_formula_2)),
+                });
+            }
+
+            let disjunction_univs = disjunction(universe_formulas);
+
+            let conjunction = FormulaF::Implies(disjunction_univs, inner);
+
+            let final_form = quantify_forall(&var, max_arity, Box::new(conjunction));
+
+            return final_form;
         }
         FoFormulaR::PosLessEqual(var1, var2) => {
             // TODO.
