@@ -237,21 +237,22 @@ where
                     Sort::Label => "L",
                     Sort::Position => "W",
                 };
-                format!("ex1 {var}: ({var} in {sort_str}) & ({inner})")
+                format!("(ex1 {var}: ({var} in {sort_str}) & ({inner}))")
             }
             FormulaF::Forall(var, sort, inner) => {
                 let sort_str = match sort {
                     Sort::Label => "L",
                     Sort::Position => "W",
                 };
-                format!("all1 {var}: ({var} in {sort_str}) => ({inner})")
+                format!("(all1 {var}: ({var} in {sort_str}) => ({inner}))")
             }
-            FormulaF::And(left, right) => format!("({} & {})", left, right),
-            FormulaF::Or(left, right) => format!("({} | {})", left, right),
-            FormulaF::Implies(left, right) => format!("({} => {})", left, right),
-            FormulaF::Iff(left, right) => format!("({} <=> {})", left, right),
+            FormulaF::And(left, right) => format!("(({}) & ({}))", left, right),
+            FormulaF::Or(left, right) => format!("(({}) | ({}))", left, right),
+            FormulaF::Implies(left, right) => format!("(({}) => ({}))", left, right),
+            FormulaF::Iff(left, right) => format!("(({}) <=> ({}))", left, right),
             FormulaF::Not(inner) => format!("~({})", inner),
-            FormulaF::Equal(_, left, right) => format!("{} = {}", left, right),
+            FormulaF::Equal(Sort::Position, left, right) => format!("{} = {}", left, right),
+            FormulaF::Equal(Sort::Label, left, right) => format!("{} in {}", left, right),
             FormulaF::LessEqual(left, right) => format!("{} <= {}", left, right),
             FormulaF::LetterAtPos(var, letter) => {
                 let letter = letter.to_smtlib();
@@ -665,6 +666,20 @@ where
     }
     buf.push_str(");\n");
 
+    // Assert that the intersection of the letter sets is empty
+    buf.push_str("assert (");
+    for (i, name) in alphabet.iter().enumerate() {
+        if i > 0 {
+            buf.push_str(" inter ");
+        }
+        buf.push_str("L");
+        buf.push_str(name.to_mona().as_str());
+    }
+    buf.push_str(" = empty);\n");
+
+    // assert that the set of letters is non empty ?
+
+    buf.push_str("assert  (~(W = empty));\n");
     // Assert that L inter W = empty
     buf.push_str("assert (L inter W = empty);\n");
     // Assert that all x are either in L or in W

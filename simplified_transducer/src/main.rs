@@ -177,10 +177,10 @@ fn main() {
         .and(FormulaR::letter_at_pos("x".into(), "a".into()))
         .exists("x".into(), Sort::Position);
 
-    let new_formula = pullback(&last_letter_is_a, &qf);
+    let new_formula = first_letter_is_a.implies(pullback(&last_letter_is_a, &qf));
 
     println!("New formula: {:?}", new_formula);
-    let mona_solver = SMTSolver::AltErgo; // solver I want to use
+    let mona_solver = SMTSolver::Mona; // solver I want to use
     let alphabet = vec!["a".into(), "b".into()];
     let labels: Vec<String> = qf
         .labels
