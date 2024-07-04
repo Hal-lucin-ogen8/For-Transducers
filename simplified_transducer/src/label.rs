@@ -1,4 +1,4 @@
-use simplified_transducer::ast::{Stmt, Pexpr, Bexpr};
+use crate::ast::{Bexpr, Pexpr, Stmt};
 
 pub fn traverse_and_label(
     stmts: &[Stmt],
@@ -33,16 +33,34 @@ pub fn traverse_and_label(
                 for0_or_for1.push(0);
                 path.push(index);
                 for_vars.push(var.clone());
-                traverse_and_label(inner_stmts, path, labels, current_if.clone(), universe_formulas, for_vars, for0_or_for1, label_formulas);
+                traverse_and_label(
+                    inner_stmts,
+                    path,
+                    labels,
+                    current_if.clone(),
+                    universe_formulas,
+                    for_vars,
+                    for0_or_for1,
+                    label_formulas,
+                );
                 for_vars.pop();
                 path.pop();
             }
 
-            Stmt::For1(var , inner_stmts) => {
+            Stmt::For1(var, inner_stmts) => {
                 for0_or_for1.push(1);
                 path.push(index);
                 for_vars.push(var.clone());
-                traverse_and_label(inner_stmts, path, labels, current_if.clone(), universe_formulas, for_vars, for0_or_for1, label_formulas);
+                traverse_and_label(
+                    inner_stmts,
+                    path,
+                    labels,
+                    current_if.clone(),
+                    universe_formulas,
+                    for_vars,
+                    for0_or_for1,
+                    label_formulas,
+                );
                 for_vars.pop();
                 path.pop();
             }
@@ -54,7 +72,16 @@ pub fn traverse_and_label(
                 } else {
                     if_expr.clone()
                 };
-                traverse_and_label(inner_stmts, path, labels, Some(new_if_expr), universe_formulas, for_vars, for0_or_for1, label_formulas);
+                traverse_and_label(
+                    inner_stmts,
+                    path,
+                    labels,
+                    Some(new_if_expr),
+                    universe_formulas,
+                    for_vars,
+                    for0_or_for1,
+                    label_formulas,
+                );
                 path.pop();
             }
         }

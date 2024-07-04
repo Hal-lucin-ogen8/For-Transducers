@@ -164,7 +164,7 @@ where
             }
             FormulaF::Exists(var, Sort::Position, inner) => {
                 format!(
-                    "exists {var} : int. 0 <= {var} and {var} <= len and ({})",
+                    "exists {var} : int. 0 <= {var} and {var} < len and ({})",
                     inner
                 )
             }
@@ -173,15 +173,15 @@ where
             }
             FormulaF::Forall(var, Sort::Position, inner) => {
                 format!(
-                    "forall {var} : int. (0 <= {var} and {var} <= len) -> ({})",
+                    "forall {var} : int. (0 <= {var} and {var} < len) -> ({})",
                     inner
                 )
             }
-            FormulaF::And(left, right) => format!("({} and {})", left, right),
-            FormulaF::Or(left, right) => format!("({} or {})", left, right),
-            FormulaF::Implies(left, right) => format!("({} -> {})", left, right),
-            FormulaF::Iff(left, right) => format!("({} <-> {})", left, right),
-            FormulaF::Not(inner) => format!("not {}", inner),
+            FormulaF::And(left, right) => format!("(({}) and ({}))", left, right),
+            FormulaF::Or(left, right) => format!("(({}) or ({}))", left, right),
+            FormulaF::Implies(left, right) => format!("(({}) -> ({}))", left, right),
+            FormulaF::Iff(left, right) => format!("(({}) <-> ({}))", left, right),
+            FormulaF::Not(inner) => format!("(not ({}))", inner),
             FormulaF::Equal(_, left, right) => format!("{} = {}", left, right),
             FormulaF::LessEqual(left, right) => format!("{} <= {}", left, right),
             FormulaF::LetterAtPos(var, letter) => {
@@ -346,6 +346,20 @@ where
     }
 }
 
+impl ToSmtSolver for String {
+    fn to_smtlib(&self) -> String {
+        self.clone()
+    }
+
+    fn to_mona(&self) -> String {
+        self.clone()
+    }
+
+    fn to_alt_ergo(&self) -> String {
+        self.clone()
+    }
+}
+
 impl<A, S> FormulaR<A, S> {
     pub fn and(self, other: FormulaR<A, S>) -> FormulaR<A, S> {
         FormulaR {
@@ -389,19 +403,19 @@ impl<A, S> FormulaR<A, S> {
         }
     }
 
-    fn equal(sort: Sort, left: VarName, right: VarName) -> FormulaR<A, S> {
+    pub fn equal(sort: Sort, left: VarName, right: VarName) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::Equal(sort, left, right),
         }
     }
 
-    fn less_equal(left: VarName, right: VarName) -> FormulaR<A, S> {
+    pub fn less_equal(left: VarName, right: VarName) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::LessEqual(left, right),
         }
     }
 
-    fn letter_at_pos(var: VarName, letter: A) -> FormulaR<A, S> {
+    pub fn letter_at_pos(var: VarName, letter: A) -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::LetterAtPos(var, letter),
         }
@@ -413,13 +427,13 @@ impl<A, S> FormulaR<A, S> {
         }
     }
 
-    fn const_true() -> FormulaR<A, S> {
+    pub fn const_true() -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::True,
         }
     }
 
-    fn const_false() -> FormulaR<A, S> {
+    pub fn const_false() -> FormulaR<A, S> {
         FormulaR {
             inside: FormulaF::False,
         }
@@ -492,8 +506,8 @@ where
     buf.push_str("\n");
     buf.push_str("(* the word has size len *)\n");
     buf.push_str("axiom word_is_finite: forall i:int.\n");
-    buf.push_str("    (i <= len -> word(i) <> E) and\n");
-    buf.push_str("    (i > len  -> word(i) = E)  and\n");
+    buf.push_str("    ((0 <= i and i < len) -> word(i) <> E) and\n");
+    buf.push_str("    (i >= len  -> word(i) = E)  and\n");
     buf.push_str("    (i < 0    -> word(i) = E)\n");
     buf.push_str("\n");
     buf.push_str("(* The final goal *)\n");

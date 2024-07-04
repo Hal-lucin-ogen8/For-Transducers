@@ -1,15 +1,25 @@
 use crate::ast::Bexpr;
 use crate::qf_interpretation::QfInterpretation;
-use crate::two_sorted_formulas::{FormulaF, FormulaR, Sort};
+use crate::two_sorted_formulas::{FormulaF, FormulaR};
 
 pub fn bexpr_to_formula_s(bexpr: &Bexpr) -> FormulaS {
     match bexpr {
         Bexpr::Var(var_name) => {
-            // Handle variable expressions; assume Sort::Position for variables.
-            FormulaS {
-                inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Position, var_name.clone(), var_name.clone()),
+            if var_name == "T" {
+                FormulaS::const_true()
+            } else if var_name == "F" {
+                FormulaS::const_false()
+            } else {
+                // Handle variable expressions; assume Sort::Position for variables.
+                FormulaS {
+                    inside: FormulaF::Equal(
+                        crate::two_sorted_formulas::Sort::Position,
+                        var_name.clone(),
+                        var_name.clone(),
+                    ),
+                }
             }
-        },
+        }
 
         Bexpr::Str(s) => {
             // Handle string expressions; "T" for true and "F" for false.
@@ -30,106 +40,98 @@ pub fn bexpr_to_formula_s(bexpr: &Bexpr) -> FormulaS {
                         unimplemented!("Unexpected string value");
                     }
                 }
-            
             }
-        },
+        }
 
         Bexpr::LessEqual(lhs, rhs) => {
             // Handle less than or equal to comparison.
             FormulaS {
-                inside: FormulaF::LessEqual(
-                    extract_var_name(lhs),
-                    extract_var_name(rhs),
-                ),
+                inside: FormulaF::LessEqual(extract_var_name(lhs), extract_var_name(rhs)),
             }
-        },
+        }
 
         Bexpr::Less(lhs, rhs) => {
             // Handle less than comparison.
             // Convert to: not (rhs <= lhs)
             FormulaS {
                 inside: FormulaF::Not(Box::new(FormulaS {
-                    inside: FormulaF::LessEqual(
-                        extract_var_name(rhs),
-                        extract_var_name(lhs),
-                    ),
+                    inside: FormulaF::LessEqual(extract_var_name(rhs), extract_var_name(lhs)),
                 })),
             }
-        },
+        }
 
         Bexpr::Equal(lhs, rhs) => {
+            let label_str: Option<(String, String)> = try_extract_label_variable(lhs)
+                .and_then(|label| try_extract_str(rhs).map(|letter| (label, letter)));
 
-            let rhs_clone = rhs.clone();
-            let lhs_clone = lhs.clone();
+            let str_label: Option<(String, String)> = try_extract_str(lhs)
+                .and_then(|letter| try_extract_label_variable(rhs).map(|label| (label, letter)));
 
-            if let Bexpr::Label(var_name) = *lhs_clone {
-                if let Bexpr::Str(letter) = *rhs_clone {
-                    // Handle case where lhs is Label(var_name) and rhs is "a", "b", or "#".
-                    return FormulaS {
-                        inside: FormulaF::LetterAtPos(var_name, letter),
-                    };
-                }
+            let var_var: Option<(String, String)> = try_extract_position_variable(lhs)
+                .and_then(|var1| try_extract_position_variable(rhs).map(|var2| (var1, var2)));
+
+            if let Some((label, letter)) = label_str {
+                FormulaS::letter_at_pos(label, letter)
+            } else if let Some((label, letter)) = str_label {
+                FormulaS::letter_at_pos(label, letter)
+            } else if let Some((var1, var2)) = var_var {
+                FormulaS::equal(crate::two_sorted_formulas::Sort::Position, var1, var2)
+            } else {
+                unimplemented!("Unexpected value for lhs and rhs");
             }
-            
-            // Handle other equality comparisons
-            FormulaS {
-                inside: FormulaF::Equal(
-                    crate::two_sorted_formulas::Sort::Position,
-                    extract_var_name(lhs),
-                    extract_var_name(rhs),
-                ),
-            }
-        },
+        }
 
         Bexpr::NotEqual(lhs, rhs) => {
-            // Handle not equal comparison.
-            FormulaS {
-                inside: FormulaF::Not(Box::new(FormulaS {
-                    inside: FormulaF::Equal(
-                        crate::two_sorted_formulas::Sort::Position,
-                        extract_var_name(lhs),
-                        extract_var_name(rhs),
-                    ),
-                })),
+            let label_str: Option<(String, String)> = try_extract_label_variable(lhs)
+                .and_then(|label| try_extract_str(rhs).map(|letter| (label, letter)));
+
+            let str_label: Option<(String, String)> = try_extract_str(lhs)
+                .and_then(|letter| try_extract_label_variable(rhs).map(|label| (label, letter)));
+
+            let var_var: Option<(String, String)> = try_extract_position_variable(lhs)
+                .and_then(|var1| try_extract_position_variable(rhs).map(|var2| (var1, var2)));
+
+            if let Some((label, letter)) = label_str {
+                FormulaS::letter_at_pos(label, letter).not()
+            } else if let Some((label, letter)) = str_label {
+                FormulaS::letter_at_pos(label, letter).not()
+            } else if let Some((var1, var2)) = var_var {
+                FormulaS::equal(crate::two_sorted_formulas::Sort::Position, var1, var2).not()
+            } else {
+                unimplemented!("Unexpected value for lhs and rhs");
             }
-        },
+        }
 
         Bexpr::GreaterEqual(lhs, rhs) => {
             // Handle greater than or equal to comparison.
             // Convert to: rhs <= lhs
             FormulaS {
-                inside: FormulaF::LessEqual(
-                    extract_var_name(rhs),
-                    extract_var_name(lhs),
-                ),
+                inside: FormulaF::LessEqual(extract_var_name(rhs), extract_var_name(lhs)),
             }
-        },
+        }
 
         Bexpr::Greater(lhs, rhs) => {
             // Handle greater than comparison.
             // Convert to: not (lhs <= rhs)
             FormulaS {
                 inside: FormulaF::Not(Box::new(FormulaS {
-                    inside: FormulaF::LessEqual(
-                        extract_var_name(lhs),
-                        extract_var_name(rhs),
-                    ),
+                    inside: FormulaF::LessEqual(extract_var_name(lhs), extract_var_name(rhs)),
                 })),
             }
-        },
+        }
 
         Bexpr::Not(inner) => {
             // Handle negation.
             FormulaS {
                 inside: FormulaF::Not(Box::new(bexpr_to_formula_s(inner))),
             }
-        },
+        }
 
         Bexpr::Label(label) => {
             // Handle label expressions.
             unimplemented!("Labels shouldn't be directly part of Bexpr");
-        },
-        
+        }
+
         Bexpr::And(lhs, rhs) => {
             // Handle logical AND.
             FormulaS {
@@ -138,7 +140,7 @@ pub fn bexpr_to_formula_s(bexpr: &Bexpr) -> FormulaS {
                     Box::new(bexpr_to_formula_s(rhs)),
                 ),
             }
-        },
+        }
 
         Bexpr::Or(lhs, rhs) => {
             // Handle logical OR.
@@ -148,15 +150,38 @@ pub fn bexpr_to_formula_s(bexpr: &Bexpr) -> FormulaS {
                     Box::new(bexpr_to_formula_s(rhs)),
                 ),
             }
-        },
+        }
     }
 }
 
 // Helper function to extract variable names from Bexpr.
 fn extract_var_name(bexpr: &Bexpr) -> String {
+    eprintln!("bexpr: {:?}", bexpr);
     match bexpr {
         Bexpr::Var(var_name) => var_name.clone(),
+        Bexpr::Label(var_name) => var_name.clone(),
         _ => unimplemented!("Expected a variable"),
+    }
+}
+
+fn try_extract_position_variable(bexpr: &Bexpr) -> Option<String> {
+    match bexpr {
+        Bexpr::Var(var_name) => Some(var_name.clone()),
+        _ => None,
+    }
+}
+
+fn try_extract_label_variable(bexpr: &Bexpr) -> Option<String> {
+    match bexpr {
+        Bexpr::Label(var_name) => Some(var_name.clone()),
+        _ => None,
+    }
+}
+
+fn try_extract_str(bexpr: &Bexpr) -> Option<String> {
+    match bexpr {
+        Bexpr::Str(s) => Some(s.clone()),
+        _ => None,
     }
 }
 
@@ -190,12 +215,21 @@ pub fn substitute_variables(formula: &Bexpr, name_x: &str, name_y: &str) -> Bexp
         Bexpr::Var(var_name) if var_name.starts_with("x") => {
             let num_part = &var_name[1..]; // Extract numeric part after "x"
             Bexpr::Var(format!("{}{}", name_x, num_part))
-        },
+        }
         Bexpr::Var(var_name) if var_name.starts_with("y") => {
             let num_part = &var_name[1..]; // Extract numeric part after "y"
             Bexpr::Var(format!("{}{}", name_y, num_part))
-        },
+        }
         Bexpr::Var(var_name) => Bexpr::Var(var_name.clone()), // for other variables
+        Bexpr::Label(var_name) if var_name.starts_with("x") => {
+            let num_part = &var_name[1..]; // Extract numeric part after "x"
+            Bexpr::Label(format!("{}{}", name_x, num_part))
+        }
+        Bexpr::Label(var_name) if var_name.starts_with("y") => {
+            let num_part = &var_name[1..]; // Extract numeric part after "y"
+            Bexpr::Label(format!("{}{}", name_y, num_part))
+        }
+        Bexpr::Label(var_name) => Bexpr::Label(var_name.clone()), // for other variables
         Bexpr::Str(_) => formula.clone(), // assuming Str does not need substitution
         Bexpr::LessEqual(left, right) => Bexpr::LessEqual(
             Box::new(substitute_variables(left, name_x, name_y)),
@@ -222,7 +256,6 @@ pub fn substitute_variables(formula: &Bexpr, name_x: &str, name_y: &str) -> Bexp
             Box::new(substitute_variables(right, name_x, name_y)),
         ),
         Bexpr::Not(subexpr) => Bexpr::Not(Box::new(substitute_variables(subexpr, name_x, name_y))),
-        Bexpr::Label(_) => formula.clone(), // assuming Label does not need substitution
         Bexpr::And(left, right) => Bexpr::And(
             Box::new(substitute_variables(left, name_x, name_y)),
             Box::new(substitute_variables(right, name_x, name_y)),
@@ -235,14 +268,19 @@ pub fn substitute_variables(formula: &Bexpr, name_x: &str, name_y: &str) -> Bexp
 }
 
 /// TODO: implement
-pub fn universe_formula(qf: &QfInterpretation, label:usize, var_name: &str) -> FormulaS {
+pub fn universe_formula(qf: &QfInterpretation, label: usize, var_name: &str) -> FormulaS {
     // 1. find the correct formula (qf.letter.find (...))
     // 2. substitute the variables in the formula with x -> var
     // 3. return the formula
-    for (label_num, expr) in qf.universe.iter(){
+    for (label_num, expr) in qf.universe.iter() {
         if *label_num == label {
             let mut substituted_formula = expr.clone();
+            eprintln!("\n\n expr: {:?}", expr);
             substituted_formula = substitute_variables(&substituted_formula, var_name, "");
+            eprintln!(
+                "\n\n substituted_formula: x->{var_name} {:?}",
+                substituted_formula
+            );
 
             let final_formula = bexpr_to_formula_s(&substituted_formula);
 
@@ -264,30 +302,36 @@ pub fn order_formula(
     // 1. find the correct formula (qf.letter.find (...)) based on the labels
     // 2. substitute the variables in the formula with x -> var_x, y -> var_y
     // 3. return the formula
-    
+
     //parse through all order formulas in qf and check if the labels match
     for (label1, label2, formula) in qf.order.iter() {
         if *label1 == lx && *label2 == ly {
             //substitute the variables in the formula with x -> var_x, y -> var_y
             let mut substituted_formula = formula.clone();
             substituted_formula = substitute_variables(&substituted_formula, var_x, var_y);
-            
+
             let final_formula = bexpr_to_formula_s(&substituted_formula);
-            
-            return final_formula; 
-            
+
+            return final_formula;
         }
     }
-    
-    unimplemented!("No matching order formula found");
 
+    unimplemented!("No matching order formula found");
 }
 
 /// TODO: implement
 // Function to find the letter formula and substitute variables
-pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) -> Option<FormulaS> {
+pub fn letter_formula(
+    qf: &QfInterpretation,
+    l: usize,
+    var: &str,
+    letter: &str,
+) -> Option<FormulaS> {
     // Find the correct formula from the `letters` vector
-    let letter_entry = qf.letters.iter().find(|(label, letter_find, _)| *label == l && letter == letter_find);
+    let letter_entry = qf
+        .letters
+        .iter()
+        .find(|(label, letter_find, _)| *label == l && letter == letter_find);
 
     if let Some((_, _, formula)) = letter_entry {
         // Substitute variables in the formula
@@ -295,9 +339,7 @@ pub fn letter_formula(qf: &QfInterpretation, l: usize, var: &str, letter: &str) 
 
         // Return the modified formula
         Some(bexpr_to_formula_s(&substituted_formula))
-    } 
-    
-    else {
+    } else {
         None
     }
 }
@@ -327,26 +369,26 @@ pub fn disjunction(vec: Vec<FormulaS>) -> FormulaS {
 // TODO: check the range of the for loop ! [Number, ...., 1]
 pub fn quantify_exists(var: &str, number: usize, formula: FormulaS) -> FormulaS {
     let mut f = formula;
-    for i in number..0 {
+    for i in (1..number + 1).rev() {
         f = f.exists(
             format!("{}{}", var, i),
             crate::two_sorted_formulas::Sort::Position,
         );
     }
-    f = f.exists(format!("lx"), crate::two_sorted_formulas::Sort::Label);
+    f = f.exists(format!("l{var}"), crate::two_sorted_formulas::Sort::Label);
     f
 }
 
 pub fn quantify_forall(var: &str, number: usize, formula: FormulaS) -> FormulaS {
     let mut f = formula;
-    for i in number..0 {
+    for i in (1..number + 1).rev() {
         f = f.forall(
             format!("{}{}", var, i),
             crate::two_sorted_formulas::Sort::Position,
         );
     }
 
-    f = f.forall(format!("lx"), crate::two_sorted_formulas::Sort::Label);
+    f = f.forall(format!("l{var}"), crate::two_sorted_formulas::Sort::Label);
     f
 }
 
@@ -354,7 +396,7 @@ type Letter = String;
 type Variable = String;
 
 #[derive(Debug, Clone)]
-enum FoFormulaR<T> {
+pub enum FoFormulaR<T> {
     And(T, T),
     Or(T, T),
     Not(T),
@@ -367,8 +409,8 @@ enum FoFormulaR<T> {
 }
 
 #[derive(Debug, Clone)]
-struct FoFormula {
-    inside: FoFormulaR<Box<FoFormula>>,
+pub struct FoFormula {
+    pub inside: FoFormulaR<Box<FoFormula>>,
 }
 
 pub fn map_fo_formula<F, S, T>(formula: &FoFormulaR<T>, f: &F) -> FoFormulaR<S>
@@ -464,25 +506,31 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
 
             let mut universe_formulas = Vec::new();
-            for (i, expr) in qf.universe.iter(){
-                let temp_formula_1 = universe_formula(qf, *i,&format!("{}{}", var, i));
+            for (i, expr) in qf.universe.iter() {
+                let temp_formula_1 = universe_formula(qf, *i, &var);
                 let temp_formula_2 = FormulaR {
-                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, format!("l{}", var), format!("l{}",i)),
+                    inside: FormulaF::Equal(
+                        crate::two_sorted_formulas::Sort::Label,
+                        format!("l{}", var),
+                        format!("l{}", i),
+                    ),
                 };
-                
+
                 universe_formulas.push(FormulaR {
                     inside: FormulaF::And(Box::new(temp_formula_1), Box::new(temp_formula_2)),
                 });
             }
 
+            eprintln!("universe_formulas: {:?}", universe_formulas);
+
             let disjunction_univs = disjunction(universe_formulas);
 
-            let conjunction = FormulaF::And(inner, disjunction_univs);
+            // let conjunction = FormulaF::And(inner, disjunction_univs);
+            let conjuction = disjunction_univs.and(inner);
 
-            let final_form = quantify_exists(&var, max_arity, Box::new(conjunction));
+            let final_form = quantify_exists(&var, max_arity, conjuction);
 
             return final_form;
-
         }
         FoFormulaR::Forall(var, inner) => {
             // TODO.
@@ -499,12 +547,17 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             let max_arity = qf.arities.iter().cloned().max().unwrap_or(0);
 
             let mut universe_formulas = Vec::new();
-            for (i, expr) in qf.universe.iter(){
-                let temp_formula_1 = universe_formula(qf, *i,&format!("{}{}", var, i));
+            for (i, expr) in qf.universe.iter() {
+                let temp_formula_1 = universe_formula(qf, *i, &var);
+                eprintln!("temp_formula_1: {var} {:?}", temp_formula_1);
                 let temp_formula_2 = FormulaR {
-                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, format!("l{}", var), format!("l{}",i)),
+                    inside: FormulaF::Equal(
+                        crate::two_sorted_formulas::Sort::Label,
+                        format!("l{}", var),
+                        format!("l{}", i),
+                    ),
                 };
-                
+
                 universe_formulas.push(FormulaR {
                     inside: FormulaF::And(Box::new(temp_formula_1), Box::new(temp_formula_2)),
                 });
@@ -512,9 +565,9 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
 
             let disjunction_univs = disjunction(universe_formulas);
 
-            let implication = FormulaF::Implies(disjunction_univs, inner);
+            let implication = disjunction_univs.implies(inner);
 
-            let final_form = quantify_forall(&var, max_arity, Box::new(implication));
+            let final_form = quantify_forall(&var, max_arity, implication);
 
             return final_form;
         }
@@ -530,16 +583,30 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             // ((l1 = lz /\ l2 = lp) /\ order_formula(z, p, l1, l2, qf))
             //
             let mut disjunctions = Vec::new();
-            for label1 in &qf.labels {
-                for label2 in &qf.labels {
-                    let order_formula = order_formula(qf, label1.parse().unwrap(), label2.parse().unwrap(), var1.as_str(), var2.as_str());
+            for (label1_number, label1_string) in qf.labels.iter().enumerate() {
+                for (label2_number, label2_string) in qf.labels.iter().enumerate() {
+                    let order_formula = order_formula(
+                        qf,
+                        label1_number,
+                        label2_number,
+                        var1.as_str(),
+                        var2.as_str(),
+                    );
                     let conjunction = FormulaR {
                         inside: FormulaF::And(
                             Box::new(FormulaR {
-                                inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, var1.clone(), label1.clone()),
+                                inside: FormulaF::Equal(
+                                    crate::two_sorted_formulas::Sort::Label,
+                                    format!("l{var1}"),
+                                    format!("l{label1_number}"),
+                                ),
                             }),
                             Box::new(FormulaR {
-                                inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, var2.clone(), label2.clone()),
+                                inside: FormulaF::Equal(
+                                    crate::two_sorted_formulas::Sort::Label,
+                                    format!("l{var2}"),
+                                    format!("l{label2_number}"),
+                                ),
                             }),
                         ),
                     };
@@ -573,9 +640,15 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             //
             let mut disjunctions = Vec::new();
             for (index, label) in qf.labels.iter().enumerate() {
-                if let Some(letter_formula) = letter_formula(qf, index, var.as_str(), letter.as_str()) {
+                if let Some(letter_formula) =
+                    letter_formula(qf, index, var.as_str(), letter.as_str())
+                {
                     let conjunction = FormulaR {
-                        inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, var.clone(), label.clone()),
+                        inside: FormulaF::Equal(
+                            crate::two_sorted_formulas::Sort::Label,
+                            format!("l{var}"),
+                            format!("l{index}"),
+                        ),
                     };
                     let conjunction_with_letter = FormulaR {
                         inside: FormulaF::And(Box::new(conjunction), Box::new(letter_formula)),

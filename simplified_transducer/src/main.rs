@@ -1,14 +1,15 @@
 use simplified_transducer::ast::Bexpr;
-use simplified_transducer::{tokenize, Parser};
+use simplified_transducer::bexpr_evaluator::*;
 use simplified_transducer::interpreter::Interpreter;
+use simplified_transducer::label::*;
+use simplified_transducer::order::*;
+use simplified_transducer::qf_interpretation;
+use simplified_transducer::qf_pullback::{pullback, FoFormula, FoFormulaR};
+use simplified_transducer::two_sorted_formulas::{FormulaR, SMTSolver, Sort};
+use simplified_transducer::{tokenize, Parser};
+
 use std::env;
 use std::fs;
-mod bexpr_evaluator;
-mod label;
-mod order;
-mod qf_interpretation;
-use label::traverse_and_label;
-use order::generate_order_formula;
 
 fn main() {
     // Collect command-line arguments
@@ -27,7 +28,6 @@ fn main() {
     // Parse the tokens into an AST
     let mut parser = Parser::new(tokens);
     let stmts = parser.parse();
-
 
     let mut path = Vec::new();
     let mut labels = Vec::new();
@@ -145,22 +145,75 @@ fn main() {
     // Print the interpretation
     qf_interpretation::print_interpretation(&qf, &for_vars);
 
+    // have a formula
+    // that says, that the last letter of the output should be
+    // an a.
+    //
+    // φ = exists x. (forall y. y <= x) and a(x)
+
+    let last_letter_is_a: FoFormula = FoFormula {
+        inside: FoFormulaR::Exists(
+            "x".into(),
+            Box::new(FoFormula {
+                inside: FoFormulaR::And(
+                    Box::new(FoFormula {
+                        inside: FoFormulaR::Forall(
+                            "y".into(),
+                            Box::new(FoFormula {
+                                inside: FoFormulaR::PosLessEqual("y".into(), "x".into()),
+                            }),
+                        ),
+                    }),
+                    Box::new(FoFormula {
+                        inside: FoFormulaR::PosLetter("x".into(), "a".into()),
+                    }),
+                ),
+            }),
+        ),
+    };
+
+    let first_letter_is_a: FormulaR<String, String> = FormulaR::less_equal("x".into(), "y".into())
+        .forall("y".into(), Sort::Position)
+        .and(FormulaR::letter_at_pos("x".into(), "a".into()))
+        .exists("x".into(), Sort::Position);
+
+    let new_formula = pullback(&last_letter_is_a, &qf);
+
+    println!("New formula: {:?}", new_formula);
+    let mona_solver = SMTSolver::AltErgo; // solver I want to use
+    let alphabet = vec!["a".into(), "b".into()];
+    let labels: Vec<String> = qf
+        .labels
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("l{i}"))
+        .collect();
+
+    println!("Checking formula with solver: {:?}", mona_solver);
+    println!(
+        "Data: \n {} \n",
+        mona_solver.produce_output(&new_formula, &alphabet, &labels)
+    );
+
+    let result = mona_solver.solve(&new_formula, &alphabet, &labels);
+    println!("Result: {:?}", result);
+
     // simplified_transducer::two_sorted_formulas::example();
 
-        // ask for an input string
-        let mut input = String::new();
-        println!("Enter a string to evaluate the formula: ");
-        std::io::stdin().read_line(&mut input).unwrap();
-        let input = input.trim();
-        //give iterator to the interpreter
-        let qf_output = qf_interpretation::evaluate(&qf, input.to_string());
-        println!("QF output: {}", qf_output);
-        print!("TR output: ");
-        let mut interpreter = Interpreter::new(input);
-        interpreter.interpret(stmts);
-        println!("");
-        //let original_output: String = unimplemented!(); // TODO (for later) directly evaluate the transducer
-        //println!("TR output: {}", original_output);
+    // ask for an input string
+    let mut input = String::new();
+    println!("Enter a string to evaluate the formula: ");
+    std::io::stdin().read_line(&mut input).unwrap();
+    let input = input.trim();
+    //give iterator to the interpreter
+    let qf_output = qf_interpretation::evaluate(&qf, input.to_string());
+    println!("QF output: {}", qf_output);
+    print!("TR output: ");
+    let mut interpreter = Interpreter::new(input);
+    interpreter.interpret(stmts);
+    println!("");
+    //let original_output: String = unimplemented!(); // TODO (for later) directly evaluate the transducer
+    //println!("TR output: {}", original_output);
 }
 
 fn remap_variables(vars: &[String], formula: &Bexpr) -> (Vec<String>, Bexpr) {
@@ -211,7 +264,9 @@ fn remap_bexpr_with_map(expr: &Bexpr, map: &std::collections::HashMap<String, St
             Box::new(remap_bexpr_with_map(lhs, map)),
             Box::new(remap_bexpr_with_map(rhs, map)),
         ),
-        Bexpr::Label(label) => Bexpr::Label(map.get(label).cloned().unwrap_or_else(|| label.clone())),
+        Bexpr::Label(label) => {
+            Bexpr::Label(map.get(label).cloned().unwrap_or_else(|| label.clone()))
+        }
     }
 }
 

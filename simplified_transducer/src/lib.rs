@@ -1,7 +1,9 @@
 pub mod ast;
 pub mod bexpr_evaluator;
 pub mod interpreter;
+pub mod label;
 pub mod lexer;
+pub mod order;
 pub mod parser;
 pub mod qf_interpretation;
 pub mod qf_pullback;
