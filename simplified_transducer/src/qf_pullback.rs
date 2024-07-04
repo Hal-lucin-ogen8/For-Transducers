@@ -467,7 +467,7 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             for (i, expr) in qf.universe.iter(){
                 let temp_formula_1 = universe_formula(qf, *i,&format!("{}{}", var, i));
                 let temp_formula_2 = FormulaR {
-                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, "lx".to_string(), format!("l{}",i)),
+                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, format!("l{}", var), format!("l{}",i)),
                 };
                 
                 universe_formulas.push(FormulaR {
@@ -502,7 +502,7 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
             for (i, expr) in qf.universe.iter(){
                 let temp_formula_1 = universe_formula(qf, *i,&format!("{}{}", var, i));
                 let temp_formula_2 = FormulaR {
-                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, "lx".to_string(), format!("l{}",i)),
+                    inside: FormulaF::Equal(crate::two_sorted_formulas::Sort::Label, format!("l{}", var), format!("l{}",i)),
                 };
                 
                 universe_formulas.push(FormulaR {
@@ -512,9 +512,9 @@ fn pullback_unrec(post_condition: FoFormulaR<FormulaS>, qf: &QfInterpretation) -
 
             let disjunction_univs = disjunction(universe_formulas);
 
-            let conjunction = FormulaF::Implies(disjunction_univs, inner);
+            let implication = FormulaF::Implies(disjunction_univs, inner);
 
-            let final_form = quantify_forall(&var, max_arity, Box::new(conjunction));
+            let final_form = quantify_forall(&var, max_arity, Box::new(implication));
 
             return final_form;
         }
