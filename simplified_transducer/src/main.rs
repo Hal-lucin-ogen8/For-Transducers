@@ -180,7 +180,7 @@ fn main() {
     let new_formula = first_letter_is_a.implies(pullback(&last_letter_is_a, &qf));
 
     println!("New formula: {:?}", new_formula);
-    let mona_solver = SMTSolver::Mona; // solver I want to use
+    let mona_solver = SMTSolver::AltErgo; // solver I want to use
     let alphabet = vec!["a".into(), "b".into()];
     let labels: Vec<String> = qf
         .labels
