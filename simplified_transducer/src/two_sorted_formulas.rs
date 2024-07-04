@@ -160,20 +160,20 @@ where
             FormulaF::True => "true".to_string(),
             FormulaF::False => "false".to_string(),
             FormulaF::Exists(var, Sort::Label, inner) => {
-                format!("exists {} : label. {}", var, inner)
+                format!("(exists {} : label. {})", var, inner)
             }
             FormulaF::Exists(var, Sort::Position, inner) => {
                 format!(
-                    "exists {var} : int. 0 <= {var} and {var} < len and ({})",
+                    "(exists {var} : int. (0 <= {var} and {var} < len and ({})))",
                     inner
                 )
             }
             FormulaF::Forall(var, Sort::Label, inner) => {
-                format!("forall {} : label. {}", var, inner)
+                format!("(forall {} : label. {})", var, inner)
             }
             FormulaF::Forall(var, Sort::Position, inner) => {
                 format!(
-                    "forall {var} : int. (0 <= {var} and {var} < len) -> ({})",
+                    "(forall {var} : int. ((0 <= {var} and {var} < len) -> ({})))",
                     inner
                 )
             }
