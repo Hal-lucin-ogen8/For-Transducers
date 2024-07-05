@@ -16,5 +16,7 @@ pkgs.buildEnv {
     pkgs.texlive.combined.scheme-small
     # MONA
     (pkgs.callPackage ./MONA/mona.nix {})
+    # tygiel
+    # (pkgs.callPackage ./simplified_transducer/tygiel.nix {})
   ];
 }
