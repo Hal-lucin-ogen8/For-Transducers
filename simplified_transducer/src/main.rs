@@ -5,7 +5,7 @@ use simplified_transducer::label::*;
 use simplified_transducer::order::*;
 use simplified_transducer::qf_interpretation;
 use simplified_transducer::qf_pullback::{pullback, FoFormula, FoFormulaR};
-use simplified_transducer::two_sorted_formulas::{FormulaR, SMTSolver, Sort};
+use simplified_transducer::two_sorted_formulas::{FormulaR, SMTResult, SMTSolver, Sort};
 use simplified_transducer::{tokenize, Parser};
 
 use std::env;
@@ -177,10 +177,15 @@ fn main() {
         .and(FormulaR::letter_at_pos("x".into(), "a".into()))
         .exists("x".into(), Sort::Position);
 
-    let new_formula = first_letter_is_a.implies(pullback(&last_letter_is_a, &qf));
+    let new_formula = pullback(&last_letter_is_a, &qf);
 
     println!("New formula: {:?}", new_formula);
-    let mona_solver = SMTSolver::AltErgo; // solver I want to use
+    let solvers = vec![
+        SMTSolver::Mona,
+        SMTSolver::Z3,
+        SMTSolver::CVC5,
+        SMTSolver::AltErgo,
+    ];
     let alphabet = vec!["a".into(), "b".into()];
     let labels: Vec<String> = qf
         .labels
@@ -189,14 +194,15 @@ fn main() {
         .map(|(i, _)| format!("l{i}"))
         .collect();
 
-    println!("Checking formula with solver: {:?}", mona_solver);
-    println!(
-        "Data: \n {} \n",
-        mona_solver.produce_output(&new_formula, &alphabet, &labels)
-    );
-
-    let result = mona_solver.solve(&new_formula, &alphabet, &labels);
-    println!("Result: {:?}", result);
+    for solver in &solvers {
+        println!("Checking formula with solver: {:?}", solver);
+        println!(
+            "Model: {}\n\n",
+            solver.produce_output(&new_formula, &alphabet, &labels)
+        );
+        let result: SMTResult = solver.solve(&new_formula, &alphabet, &labels);
+        println!("Result: {:?}\n\n", result);
+    }
 
     // simplified_transducer::two_sorted_formulas::example();
 

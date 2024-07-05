@@ -508,9 +508,11 @@ where
     buf.push_str("(* the word has size len *)\n");
     buf.push_str("axiom word_is_finite: forall i:int.\n");
     buf.push_str("    ((0 <= i and i < len) -> word(i) <> E) and\n");
-    buf.push_str("    (i >= len  -> word(i) = E)  and\n");
+    buf.push_str("    (i >= len -> word(i) = E)  and\n");
     buf.push_str("    (i < 0    -> word(i) = E)\n");
     buf.push_str("\n");
+    buf.push_str("(* non-empty length *)");
+    buf.push_str("axiom word_is_non_empty: len > 0\n");
     buf.push_str("(* The final goal *)\n");
     buf.push_str("goal alt_ergo_goal: ");
     buf.push_str(formula.to_alt_ergo().as_str());
@@ -569,8 +571,8 @@ where
     buf.push_str("))\n");
     buf.push_str("(declare-const len Int)\n");
     buf.push_str("(declare-fun word (Int) Letter)\n");
-    buf.push_str("; assert that the word is of length len >= 0\n");
-    buf.push_str("(assert (>= len 0))\n");
+    buf.push_str("; assert that the word is of length len > 0\n");
+    buf.push_str("(assert (> len 0))\n");
     buf.push_str("; assert that the word contains only letters between 0 and len\n");
     buf.push_str(
         "(assert (forall ((x Int)) (= (word x) (ite (or (< x 0) (>= x len)) (word x) blank))))\n",
@@ -678,8 +680,8 @@ where
     buf.push_str(" = empty);\n");
 
     // assert that the set of letters is non empty ?
-
     buf.push_str("assert  (~(W = empty));\n");
+
     // Assert that L inter W = empty
     buf.push_str("assert (L inter W = empty);\n");
     // Assert that all x are either in L or in W
